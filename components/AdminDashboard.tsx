@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, Car, Map, History, DollarSign, 
   MapPin, TrendingUp, Settings, LogOut, CheckCircle, 
-  AlertTriangle, Menu, X, Activity, Star, BellRing, Send, Loader2, Info, Search, Filter
+  AlertTriangle, Menu, X, Activity, Star, BellRing, Send, Loader2, Info, Search, Filter, ClipboardList
 } from 'lucide-react';
 import { generateAdminReport } from '../services/geminiService';
 import MapVisual from './MapVisual';
@@ -27,6 +27,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
   const [pushMessage, setPushMessage] = useState('');
   const [pushTarget, setPushTarget] = useState<'ALL' | 'DRIVERS' | 'PASSENGERS'>('ALL');
   const [pushLoading, setPushLoading] = useState(false);
+
+  // DATOS DE PRUEBA (PLANTILLAS)
+  const pushTemplates = [
+    { title: "¡Bono Nocturno!", message: "Gana 20% más por viaje esta noche entre 10 PM y 2 AM. ¡Conéctate ya!", target: 'DRIVERS' as const },
+    { title: "¡Cupón de Regalo!", message: "Usa el código ZIPPYGRATIS para obtener un 50% de descuento en tu próximo viaje.", target: 'PASSENGERS' as const },
+    { title: "Actualización de Sistema", message: "Zippy estará en mantenimiento hoy a las 3:00 AM. Agradecemos tu comprensión.", target: 'ALL' as const },
+    { title: "Alerta de Lluvia", message: "Se reportan lluvias fuertes. Conduce con precaución y aprovecha la alta demanda.", target: 'DRIVERS' as const },
+  ];
 
   // DATOS DE MUESTRA MEJORADOS
   const mockDrivers = [
@@ -57,6 +65,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
           setPushTitle('');
           setPushMessage('');
       } catch (e: any) { alert("Error: " + e.message); } finally { setPushLoading(false); }
+  };
+
+  const applyTemplate = (template: typeof pushTemplates[0]) => {
+    setPushTitle(template.title);
+    setPushMessage(template.message);
+    setPushTarget(template.target);
   };
 
   useEffect(() => {
@@ -161,6 +175,98 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                             <div className="flex items-center gap-2 text-xs font-bold text-gray-600">
                                 <div className="w-3 h-3 bg-zippy-main rounded-full"></div> Pasajeros buscando
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'push' && (
+                <div className="p-10 max-w-4xl mx-auto space-y-8 animate-fade-in">
+                    <div className="bg-white p-8 rounded-[40px] shadow-xl border border-gray-100">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-3 bg-zippy-main rounded-2xl text-zippy-dark">
+                                <BellRing size={24} />
+                            </div>
+                            <h3 className="text-xl font-black text-zippy-dark uppercase tracking-tight">Nuevo Envío Masivo</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2">Título de la Notificación</label>
+                                    <input 
+                                        type="text" 
+                                        value={pushTitle} 
+                                        onChange={(e) => setPushTitle(e.target.value)}
+                                        placeholder="Ej: ¡Nuevo Bono!"
+                                        className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-zippy-main font-bold text-zippy-dark"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2">Mensaje</label>
+                                    <textarea 
+                                        value={pushMessage}
+                                        onChange={(e) => setPushMessage(e.target.value)}
+                                        placeholder="Escribe el contenido aquí..."
+                                        rows={4}
+                                        className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-zippy-main font-bold text-zippy-dark resize-none"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2">Público Objetivo</label>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {(['ALL', 'DRIVERS', 'PASSENGERS'] as const).map((t) => (
+                                            <button 
+                                                key={t}
+                                                onClick={() => setPushTarget(t)}
+                                                className={`p-4 rounded-2xl border-2 transition-all text-left font-black text-xs uppercase tracking-widest flex justify-between items-center ${
+                                                    pushTarget === t ? 'bg-zippy-dark text-white border-zippy-dark' : 'bg-white text-gray-400 border-gray-50 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                {t === 'ALL' ? 'Todos los Usuarios' : t === 'DRIVERS' ? 'Solo Conductores' : 'Solo Pasajeros'}
+                                                {pushTarget === t && <CheckCircle size={16} />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <button 
+                                    onClick={handleSendPush}
+                                    disabled={pushLoading}
+                                    className="w-full bg-zippy-main text-zippy-dark font-black py-5 rounded-[24px] shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                >
+                                    {pushLoading ? <Loader2 className="animate-spin" /> : <Send size={20} />}
+                                    ENVIAR AHORA
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* DATOS DE PRUEBA / PLANTILLAS */}
+                    <div>
+                        <div className="flex items-center gap-3 mb-6 px-2">
+                            <ClipboardList className="text-zippy-dark" size={20} />
+                            <h3 className="text-sm font-black text-zippy-dark uppercase tracking-widest">Plantillas de Prueba</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {pushTemplates.map((template, idx) => (
+                                <button 
+                                    key={idx}
+                                    onClick={() => applyTemplate(template)}
+                                    className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all text-left group"
+                                >
+                                    <div className="flex justify-between items-start mb-3">
+                                        <h4 className="font-black text-zippy-dark group-hover:text-zippy-main transition-colors">{template.title}</h4>
+                                        <span className="text-[8px] font-black px-2 py-1 bg-gray-100 rounded-full text-gray-400 uppercase">
+                                            {template.target === 'ALL' ? 'Global' : template.target}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs font-bold text-gray-500 line-clamp-2">{template.message}</p>
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>

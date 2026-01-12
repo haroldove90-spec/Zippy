@@ -5,8 +5,8 @@ declare namespace NodeJS {
 }
 
 interface Window {
-  // Removed readonly modifier to fix error: All declarations of 'aistudio' must have identical modifiers.
-  aistudio: {
+  // Re-added readonly modifier to match the global definition and fix the "identical modifiers" error.
+  readonly aistudio: {
     hasSelectedApiKey: () => Promise<boolean>;
     openSelectKey: () => Promise<void>;
   };
