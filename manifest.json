@@ -1,3 +1,4 @@
+
 {
   "name": "Zippy Taxi",
   "short_name": "Zippy",
@@ -9,7 +10,7 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://appdesignmex.com/zippy/zippyicono.png",
+      "src": "https://tritex.com.mx/zippyicono.png",
       "sizes": "512x512",
       "type": "image/png"
     }

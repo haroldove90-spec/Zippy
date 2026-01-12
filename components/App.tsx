@@ -31,7 +31,7 @@ function App() {
         <div className="w-full h-full relative animate-fade-in flex flex-col items-center justify-center">
              <div className="w-full max-w-sm px-10">
                  <img 
-                    src="https://appdesignmex.com/zippy/zippysplash.png" 
+                    src="https://tritex.com.mx/zippysplash.png" 
                     alt="Zippy Splash" 
                     className="w-full object-contain drop-shadow-2xl"
                  />
@@ -79,7 +79,7 @@ function App() {
 
         <div className="z-10 text-center mb-10">
           <img 
-            src="https://appdesignmex.com/zippy/zippylogo.png" 
+            src="https://tritex.com.mx/zippylogo.png" 
             alt="Zippy" 
             className="h-32 md:h-48 mx-auto mb-6 object-contain filter drop-shadow-xl animate-slide-up" 
           />

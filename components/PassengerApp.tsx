@@ -105,7 +105,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
         <div className="w-full h-full bg-zippy-main flex items-center justify-center p-6 animate-fade-in">
            <div className="w-full max-w-sm bg-white rounded-[40px] shadow-2xl p-8 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-2 bg-zippy-dark/10"></div>
-              <img src="https://appdesignmex.com/zippy/zippylogo.png" className="h-12 mx-auto mb-8" />
+              <img src="https://tritex.com.mx/zippylogo.png" className="h-12 mx-auto mb-8" />
               <h2 className="text-center font-black text-zippy-dark text-xl mb-6 uppercase tracking-widest">Pasajero</h2>
               
               <form onSubmit={handleAuth} className="space-y-4">

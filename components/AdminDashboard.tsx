@@ -87,7 +87,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
       {/* SIDEBAR */}
       <div className={`fixed md:relative inset-y-0 left-0 z-50 w-72 bg-zippy-main flex flex-col transition-transform duration-500 ease-in-out border-r border-zippy-dark/5 shadow-2xl ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="p-8 flex justify-between items-center">
-           <img src="https://appdesignmex.com/zippy/zippylogo.png" alt="Zippy Admin" className="h-10 object-contain drop-shadow-md" />
+           <img src="https://tritex.com.mx/zippylogo.png" alt="Zippy Admin" className="h-10 object-contain drop-shadow-md" />
            <button onClick={() => setSidebarOpen(false)} className="md:hidden text-zippy-dark"><X /></button>
         </div>
         

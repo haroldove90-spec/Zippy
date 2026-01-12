@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Download, X, Smartphone } from 'lucide-react';
 
@@ -70,7 +71,7 @@ const InstallPwaPopup: React.FC = () => {
             {/* Icon */}
             <div className="w-24 h-24 bg-white rounded-2xl p-1 shadow-lg -mt-12 mb-4">
                 <img 
-                    src="https://appdesignmex.com/zippy/zippyicono.png" 
+                    src="https://tritex.com.mx/zippyicono.png" 
                     alt="Zippy App Icon" 
                     className="w-full h-full object-contain rounded-xl"
                 />

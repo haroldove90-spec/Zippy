@@ -59,7 +59,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
   if (!isAuthenticated) {
       return (
           <div className="w-full h-full bg-zippy-dark flex flex-col items-center justify-center p-6 animate-fade-in">
-              <img src="https://appdesignmex.com/zippy/zippylogo.png" className="h-16 mb-12 filter invert" />
+              <img src="https://tritex.com.mx/zippylogo.png" className="h-16 mb-12 filter invert" />
               <div className="bg-white p-10 rounded-[40px] w-full max-w-sm shadow-2xl relative">
                   <h2 className="text-2xl font-black text-center text-zippy-dark mb-8 uppercase tracking-widest">Conductor</h2>
                   <form onSubmit={handleLogin} className="space-y-5">

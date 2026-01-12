@@ -20,8 +20,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Zippy Notificación';
   const options = {
     body: data.body || 'Tienes una nueva actualización.',
-    icon: 'https://appdesignmex.com/zippy/zippyicono.png',
-    badge: 'https://appdesignmex.com/zippy/zippyicono.png',
+    icon: 'https://tritex.com.mx/zippyicono.png',
+    badge: 'https://tritex.com.mx/zippyicono.png',
     vibrate: [200, 100, 200],
     data: { url: data.url || '/' }
   };

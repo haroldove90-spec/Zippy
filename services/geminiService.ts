@@ -1,11 +1,10 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 
 // Initialize client with API key from environment, ensuring fresh instance per call
 const getClient = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) return null;
-  return new GoogleGenAI({ apiKey });
+  if (!process.env.API_KEY) return null;
+  // Use named parameter directly from process.env as per guidelines
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 /**
@@ -46,6 +45,7 @@ export const getSmartPriceAdvice = async (pickup: string, destination: string, u
       }
     });
     
+    // Direct access to .text property (not a method)
     const text = response.text;
     if (!text) throw new Error("Empty response from AI");
     const data = JSON.parse(text);
@@ -63,7 +63,7 @@ export const chatWithZippy = async (message: string, history: any[]): Promise<st
    const ai = getClient();
    if (!ai) return "Error de conexión.";
    try {
-     // Fixed: Passing the history to chats.create to maintain conversational state
+     // Create a chat session with history and system instruction
      const chat = ai.chats.create({
         model: 'gemini-3-flash-preview',
         history: history,
@@ -71,8 +71,8 @@ export const chatWithZippy = async (message: string, history: any[]): Promise<st
      });
      // Using sendMessage for conversational turn
      const result = await chat.sendMessage({ message });
-     // Use .text property directly
-     return result.text;
+     // Direct access to .text property
+     return result.text || "Lo siento, no pude obtener una respuesta.";
    } catch (error) {
      console.error("AI Chat Error:", error);
      return "Lo siento, mi conexión con el satélite Zippy falló.";
@@ -91,7 +91,7 @@ export const generateAdminReport = async (): Promise<string> => {
       model: 'gemini-3-flash-preview',
       contents: "Genera un reporte ejecutivo breve (máximo 60 palabras) sobre el estado de las operaciones de hoy. Menciona seguridad, eficiencia y satisfacción del conductor. Responde en Español.",
     });
-    // Use .text property directly as per guidelines
+    // Direct access to .text property
     return response.text || "Reporte inteligente no disponible actualmente.";
   } catch (error) {
     console.error("AI Report Error:", error);

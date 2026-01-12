@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, User, History, CreditCard, Settings, HelpCircle, LogOut, Map, Wrench, Siren, Car, Briefcase } from 'lucide-react';
 
 interface DrawerProps {
@@ -33,7 +33,7 @@ const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, onLogout, onChangeView
         <div className="p-6 flex flex-col h-full overflow-y-auto">
           <div className="flex justify-between items-center mb-6">
              <div className="w-28">
-                 <img src="https://appdesignmex.com/zippy/zippylogo.png" alt="Zippy Logo" className="w-full object-contain filter drop-shadow-lg" />
+                 <img src="https://tritex.com.mx/zippylogo.png" alt="Zippy Logo" className="w-full object-contain filter drop-shadow-lg" />
              </div>
              <button onClick={onClose} className="p-2 text-zippy-dark hover:bg-white/20 rounded-full">
                <X className="w-6 h-6" />
