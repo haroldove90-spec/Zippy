@@ -6,8 +6,8 @@ declare namespace NodeJS {
 }
 
 interface Window {
-  // Fixed: Added readonly modifier to match the environment's global declaration of aistudio
-  readonly aistudio: {
+  // Removed readonly modifier to match identical modifier requirements for merged interface declarations
+  aistudio: {
     hasSelectedApiKey: () => Promise<boolean>;
     openSelectKey: () => Promise<void>;
   };

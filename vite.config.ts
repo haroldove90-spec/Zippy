@@ -9,7 +9,10 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false,
-    minify: 'terser'
+    minify: 'terser',
+    emptyOutDir: true,
+    commonjsOptions: {
+      transformMixedEsModules: true
+    }
   }
 });
