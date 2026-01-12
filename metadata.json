@@ -1,0 +1,9 @@
+{
+  "name": "Zippy",
+  "description": "El Taxi que va contigo - Viajes justos y seguros.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera",
+    "microphone"
+  ]
+}

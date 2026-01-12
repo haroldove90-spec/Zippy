@@ -1,0 +1,17 @@
+{
+  "name": "Zippy Taxi",
+  "short_name": "Zippy",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#A9D300",
+  "theme_color": "#A9D300",
+  "description": "El Taxi que va contigo",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://appdesignmex.com/zippy/zippyicono.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
