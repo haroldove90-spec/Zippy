@@ -6,9 +6,9 @@ declare namespace NodeJS {
 }
 
 interface Window {
-  // Removing 'readonly' as it often conflicts with existing ambient declarations in the environment.
+  // Restored 'readonly' modifier to match existing ambient declarations in the environment.
   // This ensures that all merging declarations of 'aistudio' on the Window interface have identical modifiers.
-  aistudio: {
+  readonly aistudio: {
     hasSelectedApiKey: () => Promise<boolean>;
     openSelectKey: () => Promise<void>;
   };

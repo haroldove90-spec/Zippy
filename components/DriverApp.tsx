@@ -10,7 +10,8 @@ interface DriverAppProps {
 }
 
 const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Se establece isAuthenticated en true por defecto para desactivar el formulario de acceso
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
   const [rideStatus, setRideStatus] = useState<RideStatus>(RideStatus.IDLE);
   const [loading, setLoading] = useState(false);
@@ -60,7 +61,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
       return (
           <div className="w-full h-full bg-zippy-dark flex flex-col items-center justify-center p-6 animate-fade-in">
               <img src="https://tritex.com.mx/zippylogo.png" className="h-16 mb-12 filter invert" />
-              <div className="bg-white p-10 rounded-[40px] w-full max-w-sm shadow-2xl relative">
+              <div className="bg-white p-10 rounded-[40px] w-full max-sm shadow-2xl relative">
                   <h2 className="text-2xl font-black text-center text-zippy-dark mb-8 uppercase tracking-widest">Conductor</h2>
                   <form onSubmit={handleLogin} className="space-y-5">
                       <input required placeholder="Usuario" className="w-full p-4 bg-gray-50 border rounded-2xl" value={email} onChange={e=>setEmail(e.target.value)} />
@@ -80,7 +81,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
         {/* PUSH OVERLAY */}
         {activePush && (
             <div className="fixed inset-0 z-[100] bg-zippy-dark/90 backdrop-blur-xl p-8 flex items-center justify-center animate-fade-in">
-                <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl relative border-4 border-zippy-main">
+                <div className="bg-white w-full max-sm rounded-[40px] p-8 shadow-2xl relative border-4 border-zippy-main">
                     <div className="w-20 h-20 bg-zippy-main rounded-3xl mx-auto flex items-center justify-center mb-6 shadow-xl animate-bounce">
                         <BellRing size={40} className="text-zippy-dark" />
                     </div>

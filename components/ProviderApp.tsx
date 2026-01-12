@@ -38,7 +38,8 @@ const MOCK_REQUESTS: ServiceRequest[] = [
 ];
 
 const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Se establece isAuthenticated en true por defecto para desactivar el formulario de acceso
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [loading, setLoading] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [userId, setUserId] = useState<string | null>(null);
@@ -136,7 +137,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
   if (!isAuthenticated) {
       return (
           <div className="w-full h-full bg-gray-50 flex flex-col items-center justify-center p-6 overflow-y-auto">
-             <div className="w-full max-w-sm">
+             <div className="w-full max-sm">
                 <div className="text-center mb-8">
                     <div className="w-20 h-20 bg-orange-500 rounded-3xl mx-auto flex items-center justify-center shadow-2xl mb-4 animate-bounce">
                         <Briefcase size={40} className="text-white" />
@@ -161,7 +162,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
                     )}
                     <input required type="email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl outline-none border border-gray-100 focus:border-orange-500 font-bold" placeholder="Email" />
                     <input required type="password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full bg-gray-50 p-4 rounded-2xl outline-none border border-gray-100 focus:border-orange-500 font-bold" placeholder="Contraseña" />
-                    <button className="w-full bg-orange-500 text-white font-black py-5 rounded-2xl shadow-xl hover:scale-[1.02] transition-transform">
+                    <button className="w-full bg-orange-500 text-white font-black py-4 rounded-2xl shadow-xl hover:scale-[1.02] transition-transform">
                         {loading ? <Loader2 className="animate-spin mx-auto" /> : 'INGRESAR AL PANEL'}
                     </button>
                     <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="w-full text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">

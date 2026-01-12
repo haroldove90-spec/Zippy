@@ -39,7 +39,8 @@ const MOCK_WALLET = [
 ];
 
 const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Se establece isAuthenticated en true por defecto para desactivar el formulario de acceso
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<'home' | 'profile' | 'history' | 'payment' | 'services'>('home');
   const [status, setStatus] = useState<RideStatus>(RideStatus.IDLE);
@@ -146,7 +147,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
   if (!isAuthenticated) {
     return (
         <div className="w-full h-full bg-zippy-main flex items-center justify-center p-6 animate-fade-in">
-           <div className="w-full max-w-sm bg-white rounded-[40px] shadow-2xl p-8 relative overflow-hidden">
+           <div className="w-full max-sm bg-white rounded-[40px] shadow-2xl p-8 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-2 bg-zippy-dark/10"></div>
               <img src="https://tritex.com.mx/zippylogo.png" className="h-12 mx-auto mb-8" />
               <h2 className="text-center font-black text-zippy-dark text-xl mb-6 uppercase tracking-widest">Pasajero</h2>
