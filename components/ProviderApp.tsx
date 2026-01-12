@@ -168,6 +168,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
                     <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="w-full text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">
                         {authMode === 'login' ? '¿Eres nuevo? Regístrate' : '¿Ya tienes cuenta? Entra'}
                     </button>
+                    <button type="button" onClick={onBack} className="w-full text-[10px] font-black text-gray-400 uppercase tracking-widest text-center mt-2">Volver al inicio</button>
                 </form>
              </div>
           </div>
@@ -191,7 +192,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
                         <span className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em]">{serviceConfig.label}</span>
                     </div>
                 </div>
-                <button onClick={() => setIsAuthenticated(false)} className="bg-white/10 p-3 rounded-2xl text-white backdrop-blur-sm"><LogOut size={20} /></button>
+                <button onClick={onBack} className="bg-white/10 p-3 rounded-2xl text-white backdrop-blur-sm"><LogOut size={20} /></button>
             </div>
             <div className="flex justify-between items-end relative z-10">
                 <div>

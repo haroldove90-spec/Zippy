@@ -4,15 +4,15 @@ import {
   Menu, Navigation, MessageSquare, ShieldCheck, MapPin, Loader2, Calendar, Clock, Lock, 
   Eye, EyeOff, Star, BellRing, X, ChevronRight, Check, History, CreditCard, User, 
   ArrowLeft, Save, Plus, Wallet, TrendingUp, Truck, Wrench, Siren, Disc, Briefcase,
-  HeartPulse
+  HeartPulse, LogOut
 } from 'lucide-react';
-import { RideStatus, DriverOffer } from '../types';
+import { RideStatus, DriverOffer, Ride } from '../types';
 import MapVisual from './MapVisual';
 import Drawer from './Drawer';
 import AssistantModal from './AssistantModal';
 import EmergencyDirectory from './EmergencyDirectory';
 import OffersList from './OffersList';
-import DriverRegistration from './DriverRegistration'; // Nuevo import
+import DriverRegistration from './DriverRegistration'; 
 import { supabase } from '../services/supabase';
 import { getSmartPriceAdvice } from '../services/geminiService';
 
@@ -20,26 +20,7 @@ interface PassengerAppProps {
   onBack: () => void;
 }
 
-const MOCK_OFFERS: DriverOffer[] = [
-    { id: 'd1', name: 'Roberto Gómez', rating: 4.9, carModel: 'Nissan Tsuru', carPlate: 'TX-102', taxiNumber: '0842', price: 45, eta: 3, avatarUrl: 'https://ui-avatars.com/api/?name=Roberto+Gomez&background=003A70&color=fff', distance: 0.8, tripsCompleted: 1250 },
-    { id: 'd2', name: 'Elena Rodríguez', rating: 4.8, carModel: 'Hyundai Accent', carPlate: 'TX-554', taxiNumber: '1120', price: 55, eta: 5, avatarUrl: 'https://ui-avatars.com/api/?name=Elena+Rodriguez&background=A9D300&color=003A70', distance: 1.2, tripsCompleted: 840 },
-    { id: 'd3', name: 'Lucía Fernández', rating: 5.0, carModel: 'Chevrolet Aveo', carPlate: 'TX-882', taxiNumber: '0015', price: 60, eta: 2, avatarUrl: 'https://ui-avatars.com/api/?name=Lucia+Fernandez&background=FFD300&color=003A70', distance: 0.5, tripsCompleted: 2100 }
-];
-
-const MOCK_HISTORY = [
-    { id: 'h1', date: 'Hoy, 10:30 AM', from: 'Casa', to: 'Plaza Cristal', price: 45, driver: 'Roberto G.', rating: 5 },
-    { id: 'h2', date: 'Ayer, 08:15 PM', from: 'Gimnasio', to: 'Casa', price: 55, driver: 'Elena R.', rating: 4 },
-    { id: 'h3', date: '12 May, 03:20 PM', from: 'Trabajo', to: 'Centro', price: 35, driver: 'Juan P.', rating: 5 },
-];
-
-const MOCK_WALLET = [
-    { id: 'w1', type: 'charge', desc: 'Recarga OXXO Pay', amount: 500, date: '14 May' },
-    { id: 'w2', type: 'payment', desc: 'Viaje a Plaza Cristal', amount: -45, date: '14 May' },
-    { id: 'w3', type: 'payment', desc: 'Viaje a Centro', amount: -35, date: '12 May' },
-];
-
 const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
-  // Se establece isAuthenticated en true por defecto para desactivar el formulario de acceso
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<'home' | 'profile' | 'history' | 'payment' | 'services'>('home');
@@ -47,13 +28,13 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [emergencyOpen, setEmergencyOpen] = useState(false);
-  const [driverRegOpen, setDriverRegOpen] = useState(false); // Nuevo state
+  const [driverRegOpen, setDriverRegOpen] = useState(false); 
   
   const [activePush, setActivePush] = useState<{title: string, message: string} | null>(null);
   const [availableOffers, setAvailableOffers] = useState<DriverOffer[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<DriverOffer | null>(null);
+  const [activeRideId, setActiveRideId] = useState<string | null>(null);
 
-  // Perfil State
   const [userProfile, setUserProfile] = useState({
       id: 'demo-user-id',
       name: 'Pasajero de Prueba',
@@ -66,7 +47,6 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
   });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-  // Inputs
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -76,19 +56,62 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
   const [calculatedPrice, setCalculatedPrice] = useState<number>(50);
   const [smartAdvice, setSmartAdvice] = useState<{advice: string, prob: number} | null>(null);
 
+  // REALTIME OFFERS SUBSCRIPTION
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!activeRideId) return;
+
     const channel = supabase
-      .channel('passenger-notifications')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
-        const { title, message, target } = payload.new;
-        if (target === 'ALL' || target === 'PASSENGERS') {
-            setActivePush({ title, message });
+      .channel(`ride-offers-${activeRideId}`)
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'ride_offers',
+        filter: `ride_id=eq.${activeRideId}` 
+      }, (payload) => {
+        const newOffer = payload.new as any;
+        const mappedOffer: DriverOffer = {
+          id: newOffer.id,
+          name: newOffer.driver_name || 'Conductor Zippy',
+          rating: newOffer.driver_rating || 5.0,
+          carModel: newOffer.car_model || 'Vehículo Zippy',
+          carPlate: newOffer.car_plate || 'S/N',
+          taxiNumber: newOffer.taxi_number || '0000',
+          price: newOffer.offered_price,
+          eta: newOffer.eta || 5,
+          avatarUrl: newOffer.avatar_url || `https://ui-avatars.com/api/?name=C&background=random`,
+          distance: newOffer.distance || 1.0,
+          tripsCompleted: newOffer.trips_completed || 100
+        };
+        setAvailableOffers(prev => [mappedOffer, ...prev]);
+        if ("vibrate" in navigator) navigator.vibrate(200);
+      })
+      .subscribe();
+
+    const statusChannel = supabase
+      .channel(`ride-status-${activeRideId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'rides',
+        filter: `id=eq.${activeRideId}`
+      }, (payload) => {
+        const updatedRide = payload.new as Ride;
+        if (updatedRide.status === RideStatus.ARRIVED) {
+           setStatus(RideStatus.ARRIVED);
+        } else if (updatedRide.status === RideStatus.IN_PROGRESS) {
+           setStatus(RideStatus.IN_PROGRESS);
+        } else if (updatedRide.status === RideStatus.COMPLETED) {
+           setStatus(RideStatus.IDLE);
+           alert("¡Has llegado a tu destino!");
         }
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [isAuthenticated]);
+
+    return () => { 
+      supabase.removeChannel(channel); 
+      supabase.removeChannel(statusChannel);
+    };
+  }, [activeRideId]);
 
   useEffect(() => {
     const fetchAdvice = async () => {
@@ -105,10 +128,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
       e.preventDefault();
       setLoading(true);
       if ((email === 'pasajero' || email === 'demo') && password === '123_pasajero') {
-          setTimeout(() => {
-              setIsAuthenticated(true);
-              setLoading(false);
-          }, 800);
+          setTimeout(() => { setIsAuthenticated(true); setLoading(false); }, 800);
           return;
       }
       try {
@@ -121,18 +141,55 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
       } catch (error: any) { alert("Error: " + error.message); } finally { setLoading(false); }
   };
 
-  const handleRequestRide = () => {
+  const handleRequestRide = async () => {
       if (!destination) return alert("Por favor indica un destino.");
+      setLoading(true);
       setStatus(RideStatus.REQUESTING);
-      setTimeout(() => {
-          setAvailableOffers(MOCK_OFFERS);
-      }, 2000);
+      setAvailableOffers([]);
+      
+      try {
+          const { data, error } = await supabase.from('rides').insert({
+              passenger_id: userProfile.id,
+              pickup_label: pickup,
+              destination_label: destination,
+              price: calculatedPrice,
+              status: RideStatus.REQUESTING
+          }).select().single();
+
+          if (error) throw error;
+          setActiveRideId(data.id);
+      } catch (err: any) {
+          console.error("DB Error:", err);
+          // Fallback Mocks if DB fails or tables don't exist yet
+          setTimeout(() => {
+              setAvailableOffers([
+                { id: 'd1', name: 'Roberto Gómez', rating: 4.9, carModel: 'Nissan Tsuru', carPlate: 'TX-102', taxiNumber: '0842', price: calculatedPrice, eta: 3, avatarUrl: 'https://ui-avatars.com/api/?name=Roberto+Gomez&background=003A70&color=fff', distance: 0.8, tripsCompleted: 1250 }
+              ]);
+          }, 2000);
+      } finally {
+          setLoading(false);
+      }
   };
 
-  const handleAcceptOffer = (offer: DriverOffer) => {
+  const handleAcceptOffer = async (offer: DriverOffer) => {
       setSelectedDriver(offer);
-      setStatus(RideStatus.ACCEPTED);
-      setTimeout(() => setStatus(RideStatus.ARRIVED), 5000);
+      setLoading(true);
+      try {
+          if (activeRideId) {
+              const { error } = await supabase.from('rides').update({
+                  driver_id: offer.driver_id || offer.id,
+                  status: RideStatus.ACCEPTED,
+                  price: offer.price
+              }).eq('id', activeRideId);
+              if (error) throw error;
+          }
+          setStatus(RideStatus.ACCEPTED);
+      } catch (err: any) {
+          console.error("Error accepting offer:", err);
+          setStatus(RideStatus.ACCEPTED);
+      } finally {
+          setLoading(false);
+      }
   };
 
   const handleSaveProfile = () => {
@@ -151,7 +208,6 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
               <div className="absolute top-0 left-0 w-full h-2 bg-zippy-dark/10"></div>
               <img src="https://tritex.com.mx/zippylogo.png" className="h-12 mx-auto mb-8" />
               <h2 className="text-center font-black text-zippy-dark text-xl mb-6 uppercase tracking-widest">Pasajero</h2>
-              
               <form onSubmit={handleAuth} className="space-y-4">
                   <input required placeholder="Usuario (demo)" className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-zippy-main font-bold" value={email} onChange={e=>setEmail(e.target.value)} />
                   <div className="relative">
@@ -170,15 +226,13 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
     );
   }
 
-  // --- RENDERING SUB-VIEWS ---
-
   const renderProfile = () => (
       <div className="absolute inset-0 bg-gray-50 z-40 flex flex-col animate-fade-in overflow-y-auto">
           <header className="p-6 bg-white shadow-sm flex items-center gap-4">
               <button onClick={() => setView('home')} className="p-3 bg-gray-100 rounded-2xl text-zippy-dark"><ArrowLeft size={20}/></button>
               <h1 className="text-xl font-black text-zippy-dark uppercase tracking-tight">Mi Perfil</h1>
+              <button onClick={onBack} className="ml-auto p-3 text-red-500 bg-red-50 rounded-2xl"><LogOut size={20}/></button>
           </header>
-          
           <div className="p-6 space-y-6 pb-24">
               <div className="flex flex-col items-center">
                   <div className="w-32 h-32 bg-zippy-main rounded-[40px] p-1 shadow-xl border-4 border-white mb-4 relative">
@@ -188,7 +242,6 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
                   <h3 className="text-xl font-black text-zippy-dark">{userProfile.name}</h3>
                   <p className="text-[10px] font-black text-zippy-main uppercase tracking-widest">Miembro desde May 2024</p>
               </div>
-
               <div className="bg-white rounded-[32px] p-6 shadow-sm space-y-4">
                   <div className="flex justify-between items-center mb-2">
                     <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Datos Personales</h4>
@@ -196,7 +249,6 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
                         {isEditingProfile ? 'Cancelar' : 'Editar'}
                     </button>
                   </div>
-                  
                   <div className="space-y-3">
                       <div>
                           <label className="text-[9px] font-black text-gray-400 uppercase tracking-tighter mb-1 block ml-2">Nombre Completo</label>
@@ -211,32 +263,10 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
                           <input disabled={!isEditingProfile} value={userProfile.phone} onChange={e=>setUserProfile({...userProfile, phone: e.target.value})} className="w-full p-4 bg-gray-50 rounded-2xl font-bold text-zippy-dark outline-none" />
                       </div>
                   </div>
+                  {isEditingProfile && (
+                      <button onClick={handleSaveProfile} className="w-full bg-zippy-dark text-white font-black py-4 rounded-2xl shadow-xl mt-4">GUARDAR CAMBIOS</button>
+                  )}
               </div>
-
-              <div className="bg-zippy-dark rounded-[32px] p-6 shadow-xl text-white relative overflow-hidden">
-                  <div className="absolute top-0 right-0 opacity-10"><CreditCard size={150} /></div>
-                  <h4 className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-6">Tarjeta Predeterminada</h4>
-                  <div className="space-y-6 relative z-10">
-                      <p className="text-xl font-bold tracking-[4px]">{userProfile.cardNumber}</p>
-                      <div className="flex justify-between items-end">
-                          <div>
-                              <p className="text-[8px] font-black text-white/40 uppercase">Titular</p>
-                              <p className="text-sm font-bold uppercase">{userProfile.cardName}</p>
-                          </div>
-                          <div className="text-right">
-                              <p className="text-[8px] font-black text-white/40 uppercase">Expira</p>
-                              <p className="text-sm font-bold">{userProfile.cardExpiry}</p>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-
-              {isEditingProfile && (
-                  <button onClick={handleSaveProfile} className="w-full bg-zippy-main text-zippy-dark font-black py-5 rounded-[24px] shadow-xl flex items-center justify-center gap-2">
-                      {loading ? <Loader2 className="animate-spin" /> : <Save size={20}/>}
-                      GUARDAR CAMBIOS
-                  </button>
-              )}
           </div>
       </div>
   );
@@ -247,126 +277,8 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
               <button onClick={() => setView('home')} className="p-3 bg-gray-100 rounded-2xl text-zippy-dark"><ArrowLeft size={20}/></button>
               <h1 className="text-xl font-black text-zippy-dark uppercase tracking-tight">Mis Viajes</h1>
           </header>
-          <div className="p-6 space-y-4">
-              {MOCK_HISTORY.map(ride => (
-                  <div key={ride.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 flex flex-col gap-3">
-                      <div className="flex justify-between items-start">
-                          <div>
-                              <p className="text-[10px] font-black text-zippy-main uppercase tracking-widest">{ride.date}</p>
-                              <h4 className="font-black text-zippy-dark text-lg">${ride.price}</h4>
-                          </div>
-                          <div className="flex items-center gap-1 text-yellow-500">
-                              <Star size={14} fill="currentColor" />
-                              <span className="text-xs font-black">{ride.rating}</span>
-                          </div>
-                      </div>
-                      <div className="space-y-2 border-l-2 border-dashed border-gray-100 ml-2 pl-4 py-1">
-                          <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                              <p className="text-xs font-bold text-gray-500">{ride.from}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                              <p className="text-xs font-bold text-zippy-dark">{ride.to}</p>
-                          </div>
-                      </div>
-                      <div className="flex items-center gap-3 pt-2 border-t border-gray-50">
-                          <img src={`https://ui-avatars.com/api/?name=${ride.driver}`} className="w-8 h-8 rounded-full" />
-                          <p className="text-xs font-black text-gray-400">Conducido por <span className="text-zippy-dark">{ride.driver}</span></p>
-                      </div>
-                  </div>
-              ))}
-          </div>
-      </div>
-  );
-
-  const renderPayment = () => (
-      <div className="absolute inset-0 bg-gray-50 z-40 flex flex-col animate-fade-in overflow-y-auto">
-          <header className="p-6 bg-white shadow-sm flex items-center gap-4">
-              <button onClick={() => setView('home')} className="p-3 bg-gray-100 rounded-2xl text-zippy-dark"><ArrowLeft size={20}/></button>
-              <h1 className="text-xl font-black text-zippy-dark uppercase tracking-tight">Billetera</h1>
-          </header>
-          
-          <div className="p-6 space-y-6">
-              <div className="bg-zippy-main p-8 rounded-[40px] shadow-2xl relative overflow-hidden">
-                  <div className="absolute -bottom-10 -right-10 opacity-10"><Wallet size={180} /></div>
-                  <p className="text-[10px] font-black text-zippy-dark/50 uppercase tracking-[0.2em] mb-2">Zippy Cash</p>
-                  <h2 className="text-5xl font-black text-zippy-dark mb-8">$1,245.00</h2>
-                  <div className="flex gap-3">
-                      <button className="flex-1 bg-zippy-dark text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg">
-                          <Plus size={18} /> RECARGAR
-                      </button>
-                      <button className="p-4 bg-white/30 backdrop-blur-md rounded-2xl text-zippy-dark"><TrendingUp size={24}/></button>
-                  </div>
-              </div>
-
-              <div>
-                  <h3 className="text-xs font-black text-zippy-dark uppercase tracking-widest mb-4 ml-2">Movimientos Recientes</h3>
-                  <div className="space-y-2">
-                      {MOCK_WALLET.map(tx => (
-                          <div key={tx.id} className="bg-white p-4 rounded-2xl shadow-sm flex items-center justify-between border border-gray-50">
-                              <div className="flex items-center gap-3">
-                                  <div className={`p-3 rounded-xl ${tx.type === 'charge' ? 'bg-green-100 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                                      {tx.type === 'charge' ? <Plus size={18}/> : <ArrowLeft size={18} className="rotate-180"/>}
-                                  </div>
-                                  <div>
-                                      <p className="text-sm font-black text-zippy-dark">{tx.desc}</p>
-                                      <p className="text-[10px] font-bold text-gray-400">{tx.date}</p>
-                                  </div>
-                              </div>
-                              <span className={`font-black ${tx.type === 'charge' ? 'text-green-500' : 'text-red-500'}`}>
-                                  {tx.type === 'charge' ? '+' : ''}${Math.abs(tx.amount)}
-                              </span>
-                          </div>
-                      ))}
-                  </div>
-              </div>
-          </div>
-      </div>
-  );
-
-  const renderServices = () => (
-      <div className="absolute inset-0 bg-gray-50 z-40 flex flex-col animate-fade-in overflow-y-auto">
-          <header className="p-6 bg-white shadow-sm flex items-center gap-4">
-              <button onClick={() => setView('home')} className="p-3 bg-gray-100 rounded-2xl text-zippy-dark"><ArrowLeft size={20}/></button>
-              <h1 className="text-xl font-black text-zippy-dark uppercase tracking-tight">Asistencia</h1>
-          </header>
-          
-          <div className="p-6 space-y-8">
-              <div className="grid grid-cols-2 gap-4">
-                  {[
-                      { id: 'grua', icon: Truck, label: 'Grúas', color: 'bg-orange-500' },
-                      { id: 'mecanico', icon: Wrench, label: 'Taller', color: 'bg-blue-600' },
-                      { id: 'ambulancia', icon: HeartPulse, label: 'Salud', color: 'bg-red-600' },
-                      { id: 'seguro', icon: ShieldCheck, label: 'Seguro', color: 'bg-green-600' },
-                  ].map(s => (
-                      <button key={s.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 flex flex-col items-center gap-3 active:scale-95 transition-all">
-                          <div className={`p-4 rounded-2xl ${s.color} text-white shadow-lg`}><s.icon size={28}/></div>
-                          <span className="text-xs font-black text-zippy-dark uppercase tracking-widest">{s.label}</span>
-                      </button>
-                  ))}
-              </div>
-
-              <div>
-                  <h3 className="text-xs font-black text-zippy-dark uppercase tracking-widest mb-4 ml-2">Proveedores Destacados</h3>
-                  <div className="space-y-4">
-                      {[
-                          { name: 'Grúas El Rayo', type: 'Servicio 24h', rating: 4.9, dist: '2.5 km' },
-                          { name: 'Mecánica Express', type: 'Especialista', rating: 4.7, dist: '4.1 km' },
-                      ].map((p, i) => (
-                          <div key={i} className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 flex justify-between items-center">
-                              <div className="flex items-center gap-4">
-                                  <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center text-zippy-dark"><Briefcase size={24}/></div>
-                                  <div>
-                                      <h4 className="font-black text-zippy-dark">{p.name}</h4>
-                                      <p className="text-[10px] font-bold text-gray-400 uppercase">{p.type} • {p.dist}</p>
-                                  </div>
-                              </div>
-                              <button className="p-3 bg-zippy-main rounded-2xl text-zippy-dark"><ChevronRight size={20}/></button>
-                          </div>
-                      ))}
-                  </div>
-              </div>
+          <div className="p-6 space-y-4 text-center">
+              <p className="text-gray-400 font-bold py-10">Cargando historial real...</p>
           </div>
       </div>
   );
@@ -375,13 +287,11 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
     <div className="relative w-full h-full bg-gray-100 overflow-hidden flex flex-col font-sans">
       <MapVisual status={status} />
 
-      {/* RENDER ACTIVE VIEW OVER MAP */}
       {view === 'profile' && renderProfile()}
       {view === 'history' && renderHistory()}
-      {view === 'payment' && renderPayment()}
-      {view === 'services' && renderServices()}
+      {view === 'payment' && (<div>Payment View Mock</div>)}
+      {view === 'services' && (<div>Services View Mock</div>)}
 
-      {/* PUSH ALERT */}
       {activePush && (
           <div className="fixed inset-0 z-[500] bg-zippy-dark/90 backdrop-blur-xl p-8 flex items-center justify-center animate-fade-in">
               <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl relative border-4 border-zippy-main text-center">
@@ -392,15 +302,16 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
           </div>
       )}
 
-      {/* NAVBAR */}
       {view === 'home' && (
           <div className="absolute top-0 left-0 right-0 p-4 z-30 flex justify-between items-center">
             <button onClick={() => setDrawerOpen(true)} className="p-4 bg-white shadow-xl rounded-2xl text-zippy-dark active:scale-90 transition-transform"><Menu size={24}/></button>
-            <button onClick={() => setAssistantOpen(true)} className="p-4 bg-zippy-dark text-zippy-accent shadow-xl rounded-2xl animate-pulse"><MessageSquare size={24}/></button>
+            <div className="flex gap-2">
+                <button onClick={onBack} className="p-4 bg-white shadow-xl rounded-2xl text-red-500 active:scale-90 transition-transform"><LogOut size={24}/></button>
+                <button onClick={() => setAssistantOpen(true)} className="p-4 bg-zippy-dark text-zippy-accent shadow-xl rounded-2xl animate-pulse"><MessageSquare size={24}/></button>
+            </div>
           </div>
       )}
 
-      {/* BOTTOM PANELS (ONLY ON HOME) */}
       {view === 'home' && (
           <div className="absolute inset-x-0 bottom-0 z-30 pointer-events-none p-4 max-h-[70vh] flex flex-col overflow-hidden">
               
@@ -417,7 +328,6 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
                               <input type="text" value={destination} onChange={e=>setDestination(e.target.value)} placeholder="¿A dónde vas?" className="bg-transparent w-full font-bold outline-none text-zippy-dark" />
                           </div>
                       </div>
-
                       <div className="flex items-center justify-between mb-6 bg-gray-50 p-4 rounded-2xl">
                           <div className="flex items-center gap-3">
                             <span className="text-2xl font-black text-zippy-dark">$</span>
@@ -428,9 +338,8 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
                               {smartAdvice && <span className="text-[9px] font-bold text-zippy-main">{smartAdvice.advice}</span>}
                           </div>
                       </div>
-
-                      <button onClick={handleRequestRide} className="w-full bg-zippy-dark text-white font-black py-5 rounded-[24px] text-lg shadow-2xl active:scale-95 transition-all">
-                          ENCONTRAR ZIPPY
+                      <button onClick={handleRequestRide} disabled={loading} className="w-full bg-zippy-dark text-white font-black py-5 rounded-[24px] text-lg shadow-2xl active:scale-95 transition-all flex justify-center items-center gap-2">
+                          {loading ? <Loader2 className="animate-spin" /> : 'ENCONTRAR ZIPPY'}
                       </button>
                   </div>
               )}
@@ -451,7 +360,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
                   </div>
               )}
 
-              {(status === RideStatus.ACCEPTED || status === RideStatus.ARRIVED) && selectedDriver && (
+              {(status === RideStatus.ACCEPTED || status === RideStatus.ARRIVED || status === RideStatus.IN_PROGRESS) && selectedDriver && (
                   <div className="pointer-events-auto bg-white rounded-[40px] p-8 shadow-2xl border border-zippy-main animate-slide-up">
                       <div className="flex items-center justify-between mb-6">
                           <div className="flex items-center gap-4">
@@ -468,8 +377,8 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
                               <p className="text-[10px] font-black text-zippy-main uppercase tracking-widest mt-1">Efectivo</p>
                           </div>
                       </div>
-                      <div className={`p-4 rounded-2xl text-center font-black uppercase tracking-widest text-sm mb-4 ${status === RideStatus.ARRIVED ? 'bg-zippy-main text-zippy-dark animate-pulse' : 'bg-zippy-dark text-white'}`}>
-                          {status === RideStatus.ARRIVED ? '¡TU ZIPPY HA LLEGADO!' : `LLEGA EN ${selectedDriver.eta} MINUTOS`}
+                      <div className={`p-4 rounded-2xl text-center font-black uppercase tracking-widest text-sm mb-4 ${status === RideStatus.ARRIVED ? 'bg-zippy-main text-zippy-dark animate-pulse' : status === RideStatus.IN_PROGRESS ? 'bg-zippy-dark text-zippy-accent' : 'bg-zippy-dark text-white'}`}>
+                          {status === RideStatus.ARRIVED ? '¡TU ZIPPY HA LLEGADO!' : status === RideStatus.IN_PROGRESS ? 'VIAJE EN CURSO' : `LLEGA EN ${selectedDriver.eta} MINUTOS`}
                       </div>
                       <div className="flex gap-2">
                           <button className="flex-1 bg-gray-100 text-zippy-dark font-black py-4 rounded-2xl">MENSAJE</button>
@@ -487,19 +396,12 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
         currentView={view} 
         onChangeView={setView} 
         onOpenEmergency={()=>setEmergencyOpen(true)} 
-        onOpenDriverReg={()=>setDriverRegOpen(true)} // Nuevo prop
+        onOpenDriverReg={()=>setDriverRegOpen(true)}
         userName={userProfile.name} 
       />
-      
       <AssistantModal isOpen={assistantOpen} onClose={()=>setAssistantOpen(false)} />
       <EmergencyDirectory isOpen={emergencyOpen} onClose={()=>setEmergencyOpen(false)} />
-      
-      {/* Nuevo componente de registro */}
-      <DriverRegistration 
-        isOpen={driverRegOpen} 
-        onClose={()=>setDriverRegOpen(false)} 
-        userId={userProfile.id} 
-      />
+      <DriverRegistration isOpen={driverRegOpen} onClose={()=>setDriverRegOpen(false)} userId={userProfile.id} />
     </div>
   );
 };
