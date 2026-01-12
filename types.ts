@@ -20,17 +20,6 @@ export enum UserRole {
 
 export type ProviderCategory = 'GRUA' | 'AMBULANCIA' | 'SEGURO' | 'MECANICO' | 'LLANTERA';
 
-export interface Ride {
-  id: string;
-  passenger_id: string;
-  driver_id?: string;
-  pickup_label: string;
-  destination_label: string;
-  price: number;
-  status: RideStatus;
-  created_at?: string;
-}
-
 export interface RideRequest {
   pickup: string;
   destination: string;
@@ -44,8 +33,6 @@ export interface RideRequest {
 
 export interface DriverOffer {
   id: string;
-  ride_id?: string;
-  driver_id?: string;
   name: string;
   rating: number;
   carModel: string;
@@ -84,9 +71,6 @@ export interface UserProfile {
   taxi_number?: string;
   verification_status?: 'verified' | 'pending' | 'rejected' | 'unverified';
   documents?: DriverDocuments;
-  lat?: number;
-  lng?: number;
-  is_online?: boolean;
 }
 
 export interface MapEntity {
