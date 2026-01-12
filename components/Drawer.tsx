@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { X, User, History, CreditCard, Settings, HelpCircle, LogOut, Map, Wrench, Siren, Car, Briefcase } from 'lucide-react';
+import React from 'react';
+import { X, User, History, CreditCard, LogOut, Map, Wrench, Siren, Car, Briefcase } from 'lucide-react';
 
 interface DrawerProps {
   isOpen: boolean;
@@ -9,10 +9,13 @@ interface DrawerProps {
   currentView: string;
   onChangeView: (view: 'home' | 'profile' | 'history' | 'payment' | 'services') => void;
   onOpenEmergency: () => void;
+  onOpenDriverReg: () => void; // Nuevo prop
   userName?: string;
 }
 
-const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, onLogout, onChangeView, onOpenEmergency, currentView, userName = "Usuario" }) => {
+const Drawer: React.FC<DrawerProps> = ({ 
+  isOpen, onClose, onLogout, onChangeView, onOpenEmergency, onOpenDriverReg, currentView, userName = "Usuario" 
+}) => {
   const handleNav = (view: 'home' | 'profile' | 'history' | 'payment' | 'services') => {
     onChangeView(view);
     onClose();
@@ -101,14 +104,14 @@ const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, onLogout, onChangeView
             <div className="mt-6 mb-2">
                 <p className="text-xs font-bold text-zippy-dark/50 uppercase px-3 mb-2">Trabaja con Zippy</p>
                 <button 
-                    onClick={() => { alert("Para registrarte como Conductor, cerraremos tu sesión. Por favor ingresa en la opción 'Soy Conductor' del menú principal."); onLogout(); }}
+                    onClick={() => { onOpenDriverReg(); onClose(); }}
                     className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium text-zippy-dark hover:bg-zippy-accent/20"
                 >
                     <Car className="w-5 h-5" />
                     <span>Quiero ser Conductor</span>
                 </button>
                 <button 
-                    onClick={() => { alert("Para registrarte como Proveedor, cerraremos tu sesión. Por favor ingresa en la opción 'Soy Proveedor' del menú principal."); onLogout(); }}
+                    onClick={() => { alert("Funcionalidad de registro de proveedores disponible próximamente."); }}
                     className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium text-zippy-dark hover:bg-zippy-accent/20"
                 >
                     <Briefcase className="w-5 h-5" />

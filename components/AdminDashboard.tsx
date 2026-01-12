@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, Car, Map, History, DollarSign, 
   MapPin, TrendingUp, Settings, LogOut, CheckCircle, 
-  AlertTriangle, Menu, X, Activity, Star, BellRing, Send, Loader2, Info, Search, Filter, ClipboardList
+  AlertTriangle, Menu, X, Activity, Star, BellRing, Send, Loader2, Info, Search, Filter, ClipboardList,
+  Image as ImageIcon, Eye, FileText, Camera
 } from 'lucide-react';
 import { generateAdminReport } from '../services/geminiService';
 import MapVisual from './MapVisual';
@@ -14,7 +15,7 @@ interface AdminDashboardProps {
   onBack: () => void;
 }
 
-type AdminView = 'dashboard' | 'users' | 'drivers' | 'live_map' | 'push' | 'settings';
+type AdminView = 'dashboard' | 'users' | 'drivers' | 'live_map' | 'push' | 'media' | 'settings';
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState<AdminView>('dashboard');
@@ -28,27 +29,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
   const [pushTarget, setPushTarget] = useState<'ALL' | 'DRIVERS' | 'PASSENGERS'>('ALL');
   const [pushLoading, setPushLoading] = useState(false);
 
+  // MEDIA STATE
+  const [mediaItems, setMediaItems] = useState<any[]>([]);
+  const [filterMedia, setFilterMedia] = useState('all');
+
   // DATOS DE PRUEBA (PLANTILLAS)
   const pushTemplates = [
     { title: "¡Bono Nocturno!", message: "Gana 20% más por viaje esta noche entre 10 PM y 2 AM. ¡Conéctate ya!", target: 'DRIVERS' as const },
     { title: "¡Cupón de Regalo!", message: "Usa el código ZIPPYGRATIS para obtener un 50% de descuento en tu próximo viaje.", target: 'PASSENGERS' as const },
     { title: "Actualización de Sistema", message: "Zippy estará en mantenimiento hoy a las 3:00 AM. Agradecemos tu comprensión.", target: 'ALL' as const },
-    { title: "Alerta de Lluvia", message: "Se reportan lluvias fuertes. Conduce con precaución y aprovecha la alta demanda.", target: 'DRIVERS' as const },
   ];
 
-  // DATOS DE MUESTRA MEJORADOS
   const mockDrivers = [
     { id: '1', full_name: 'Roberto Gómez', car_model: 'Nissan Tsuru', car_plate: 'TX-102', rating: 4.9, status: 'online', email: 'roberto@zippy.mx', trips: 1250 },
     { id: '2', full_name: 'Elena Rodríguez', car_model: 'Hyundai Accent', car_plate: 'TX-554', rating: 4.8, status: 'busy', email: 'elena@zippy.mx', trips: 840 },
-    { id: '3', full_name: 'Marcos Solis', car_model: 'Toyota Yaris', car_plate: 'TX-009', rating: 3.5, status: 'offline', email: 'marcos@zippy.mx', trips: 12 },
     { id: '4', full_name: 'Lucía Fernández', car_model: 'Chevrolet Aveo', car_plate: 'TX-882', rating: 5.0, status: 'online', email: 'lucia@zippy.mx', trips: 2100 }
   ];
 
   const mockPassengers = [
     { id: 'p1', full_name: 'Carlos Slim', email: 'carlos@mail.com', trips: 45, rating: 5.0, status: 'online' },
-    { id: 'p2', full_name: 'Ximena Duque', email: 'ximena@mail.com', trips: 12, rating: 4.7, status: 'offline' },
-    { id: 'p3', full_name: 'Juan Osorio', email: 'josorio@mail.com', trips: 150, rating: 4.9, status: 'online' },
-    { id: 'p4', full_name: 'Beatriz Ramos', email: 'bramos@mail.com', trips: 8, rating: 4.5, status: 'online' }
+    { id: 'p3', full_name: 'Juan Osorio', email: 'josorio@mail.com', trips: 150, rating: 4.9, status: 'online' }
   ];
 
   const handleSendPush = async () => {
@@ -67,33 +67,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
       } catch (e: any) { alert("Error: " + e.message); } finally { setPushLoading(false); }
   };
 
-  const applyTemplate = (template: typeof pushTemplates[0]) => {
-    setPushTitle(template.title);
-    setPushMessage(template.message);
-    setPushTarget(template.target);
-  };
-
   useEffect(() => {
-    if (activeTab !== 'live_map') return;
-    const updateEntities = () => {
-        const center = { lat: 19.4326, lng: -99.1332 };
-        const entities: MapEntity[] = [
-            ...mockDrivers.filter(d => d.status !== 'offline').map(d => ({
-                id: d.id, type: 'driver' as const, label: `${d.full_name} (${d.car_plate})`, 
-                lat: center.lat + (Math.random() - 0.5) * 0.015, lng: center.lng + (Math.random() - 0.5) * 0.015,
-                status: d.status
-            })),
-            ...mockPassengers.filter(p => p.status === 'online').map(p => ({
-                id: p.id, type: 'passenger' as const, label: p.full_name,
-                lat: center.lat + (Math.random() - 0.5) * 0.015, lng: center.lng + (Math.random() - 0.5) * 0.015,
-                status: 'online'
-            }))
-        ];
-        setLiveEntities(entities);
-    };
-    updateEntities();
-    const interval = setInterval(updateEntities, 4000);
-    return () => clearInterval(interval);
+    if (activeTab === 'media') {
+        // Cargar imágenes de ejemplo para la sección de medios
+        setMediaItems([
+            { id: 1, type: 'selfie', url: 'https://ui-avatars.com/api/?name=Roberto+Gomez&size=512', owner: 'Roberto Gómez', date: '14 May' },
+            { id: 2, type: 'car', url: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=400', owner: 'Elena R.', date: '13 May' },
+            { id: 3, type: 'document', url: 'https://images.unsplash.com/photo-1589330694653-ded6df03f754?auto=format&fit=crop&q=80&w=400', owner: 'Lucía F.', date: '12 May' },
+            { id: 4, type: 'car', url: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&q=80&w=400', owner: 'Marcos S.', date: '11 May' },
+        ]);
+    }
   }, [activeTab]);
 
   const SidebarItem = ({ id, icon: Icon, label, badge }: any) => (
@@ -118,6 +101,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                <SidebarItem id="dashboard" icon={LayoutDashboard} label="Resumen" />
                <SidebarItem id="live_map" icon={Map} label="Mapa Real" badge="LIVE" />
                <SidebarItem id="push" icon={BellRing} label="Push Masivo" />
+               <SidebarItem id="media" icon={ImageIcon} label="Centro de Medios" />
            </div>
            <div>
                <p className="text-[10px] font-black text-zippy-dark/30 uppercase tracking-[0.2em] mb-4 px-4">Usuarios</p>
@@ -152,30 +136,42 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                         <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Pasajeros</p>
                         <h3 className="text-4xl font-black text-zippy-dark">{mockPassengers.length}</h3>
                     </div>
-                    <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
-                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Viajes Hoy</p>
-                        <h3 className="text-4xl font-black text-zippy-dark">128</h3>
-                    </div>
-                    <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
-                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Ingresos</p>
-                        <h3 className="text-4xl font-black text-zippy-dark">$45k</h3>
-                    </div>
                 </div>
             )}
 
-            {activeTab === 'live_map' && (
-                <div className="absolute inset-0 animate-fade-in">
-                    <MapVisual status="live_map" entities={liveEntities} />
-                    <div className="absolute top-6 left-6 z-20 bg-white/90 backdrop-blur-md p-6 rounded-[32px] shadow-2xl">
-                        <h3 className="text-xs font-black text-zippy-dark uppercase tracking-widest mb-4">Monitor de Red</h3>
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-xs font-bold text-gray-600">
-                                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div> Conductores en ruta
-                            </div>
-                            <div className="flex items-center gap-2 text-xs font-bold text-gray-600">
-                                <div className="w-3 h-3 bg-zippy-main rounded-full"></div> Pasajeros buscando
-                            </div>
+            {activeTab === 'media' && (
+                <div className="p-10 space-y-8 animate-fade-in">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                        <h3 className="text-xl font-black text-zippy-dark uppercase">Galería de Documentos y Fotos</h3>
+                        <div className="flex gap-2">
+                            {['all', 'selfie', 'car', 'document'].map(f => (
+                                <button key={f} onClick={() => setFilterMedia(f)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMedia === f ? 'bg-zippy-dark text-white' : 'bg-white text-gray-400'}`}>
+                                    {f}
+                                </button>
+                            ))}
                         </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        {mediaItems.filter(i => filterMedia === 'all' || i.type === filterMedia).map(item => (
+                            <div key={item.id} className="bg-white rounded-[32px] overflow-hidden shadow-xl border border-gray-100 group">
+                                <div className="aspect-square relative overflow-hidden">
+                                    <img src={item.url} alt="Media" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    <div className="absolute top-2 right-2 px-2 py-1 bg-zippy-main text-zippy-dark text-[8px] font-black rounded-lg uppercase">
+                                        {item.type}
+                                    </div>
+                                </div>
+                                <div className="p-4">
+                                    <p className="font-black text-zippy-dark text-sm truncate">{item.owner}</p>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.date}</p>
+                                    <div className="flex gap-2 mt-4">
+                                        <button className="flex-1 bg-zippy-dark text-white p-2 rounded-xl flex items-center justify-center"><Eye size={14}/></button>
+                                        <button className="flex-1 bg-green-100 text-green-600 p-2 rounded-xl flex items-center justify-center"><CheckCircle size={14}/></button>
+                                        <button className="flex-1 bg-red-100 text-red-600 p-2 rounded-xl flex items-center justify-center"><AlertTriangle size={14}/></button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
@@ -242,82 +238,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                                     ENVIAR AHORA
                                 </button>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* DATOS DE PRUEBA / PLANTILLAS */}
-                    <div>
-                        <div className="flex items-center gap-3 mb-6 px-2">
-                            <ClipboardList className="text-zippy-dark" size={20} />
-                            <h3 className="text-sm font-black text-zippy-dark uppercase tracking-widest">Plantillas de Prueba</h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {pushTemplates.map((template, idx) => (
-                                <button 
-                                    key={idx}
-                                    onClick={() => applyTemplate(template)}
-                                    className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all text-left group"
-                                >
-                                    <div className="flex justify-between items-start mb-3">
-                                        <h4 className="font-black text-zippy-dark group-hover:text-zippy-main transition-colors">{template.title}</h4>
-                                        <span className="text-[8px] font-black px-2 py-1 bg-gray-100 rounded-full text-gray-400 uppercase">
-                                            {template.target === 'ALL' ? 'Global' : template.target}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs font-bold text-gray-500 line-clamp-2">{template.message}</p>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {(activeTab === 'drivers' || activeTab === 'users') && (
-                <div className="p-10 animate-fade-in">
-                    <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                    <tr>
-                                        <th className="px-8 py-6">Usuario</th>
-                                        <th className="px-8 py-6">Info</th>
-                                        <th className="px-8 py-6">Viajes</th>
-                                        <th className="px-8 py-6">Rating</th>
-                                        <th className="px-8 py-6">Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {(activeTab === 'drivers' ? mockDrivers : mockPassengers).map((user: any) => (
-                                        <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 bg-gray-100 rounded-2xl overflow-hidden">
-                                                        <img src={`https://ui-avatars.com/api/?name=${user.full_name}&background=random`} alt="U" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-black text-zippy-dark">{user.full_name}</p>
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase">{user.email}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6 font-bold text-xs text-gray-600">
-                                                {user.car_model ? `${user.car_model} (${user.car_plate})` : 'Pasajero VIP'}
-                                            </td>
-                                            <td className="px-8 py-6 font-black text-zippy-dark">{user.trips}</td>
-                                            <td className="px-8 py-6 font-black text-yellow-600 flex items-center gap-1">
-                                                <Star size={14} fill="currentColor" /> {user.rating}
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                                                    user.status === 'online' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                                                }`}>
-                                                    {user.status}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
                         </div>
                     </div>
                 </div>

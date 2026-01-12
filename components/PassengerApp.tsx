@@ -4,7 +4,6 @@ import {
   Menu, Navigation, MessageSquare, ShieldCheck, MapPin, Loader2, Calendar, Clock, Lock, 
   Eye, EyeOff, Star, BellRing, X, ChevronRight, Check, History, CreditCard, User, 
   ArrowLeft, Save, Plus, Wallet, TrendingUp, Truck, Wrench, Siren, Disc, Briefcase,
-  // Added HeartPulse to fix the missing name error
   HeartPulse
 } from 'lucide-react';
 import { RideStatus, DriverOffer } from '../types';
@@ -13,6 +12,7 @@ import Drawer from './Drawer';
 import AssistantModal from './AssistantModal';
 import EmergencyDirectory from './EmergencyDirectory';
 import OffersList from './OffersList';
+import DriverRegistration from './DriverRegistration'; // Nuevo import
 import { supabase } from '../services/supabase';
 import { getSmartPriceAdvice } from '../services/geminiService';
 
@@ -46,6 +46,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [emergencyOpen, setEmergencyOpen] = useState(false);
+  const [driverRegOpen, setDriverRegOpen] = useState(false); // Nuevo state
   
   const [activePush, setActivePush] = useState<{title: string, message: string} | null>(null);
   const [availableOffers, setAvailableOffers] = useState<DriverOffer[]>([]);
@@ -53,6 +54,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
 
   // Perfil State
   const [userProfile, setUserProfile] = useState({
+      id: 'demo-user-id',
       name: 'Pasajero de Prueba',
       email: 'demo@zippy.mx',
       phone: '951 123 4567',
@@ -113,6 +115,7 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
           if (error) throw error;
           if (data.user) {
               setIsAuthenticated(true);
+              setUserProfile(prev => ({ ...prev, id: data.user.id }));
           }
       } catch (error: any) { alert("Error: " + error.message); } finally { setLoading(false); }
   };
@@ -476,9 +479,26 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
           </div>
       )}
 
-      <Drawer isOpen={drawerOpen} onClose={()=>setDrawerOpen(false)} onLogout={onBack} currentView={view} onChangeView={setView} onOpenEmergency={()=>setEmergencyOpen(true)} userName={userProfile.name} />
+      <Drawer 
+        isOpen={drawerOpen} 
+        onClose={()=>setDrawerOpen(false)} 
+        onLogout={onBack} 
+        currentView={view} 
+        onChangeView={setView} 
+        onOpenEmergency={()=>setEmergencyOpen(true)} 
+        onOpenDriverReg={()=>setDriverRegOpen(true)} // Nuevo prop
+        userName={userProfile.name} 
+      />
+      
       <AssistantModal isOpen={assistantOpen} onClose={()=>setAssistantOpen(false)} />
       <EmergencyDirectory isOpen={emergencyOpen} onClose={()=>setEmergencyOpen(false)} />
+      
+      {/* Nuevo componente de registro */}
+      <DriverRegistration 
+        isOpen={driverRegOpen} 
+        onClose={()=>setDriverRegOpen(false)} 
+        userId={userProfile.id} 
+      />
     </div>
   );
 };
