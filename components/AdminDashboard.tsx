@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, Car, Map, History, DollarSign, 
   MapPin, TrendingUp, Settings, LogOut, CheckCircle, 
-  AlertTriangle, Menu, X, Activity, Star, BellRing, Send, Loader2, Info
+  AlertTriangle, Menu, X, Activity, Star, BellRing, Send, Loader2, Info, Search, Filter
 } from 'lucide-react';
 import { generateAdminReport } from '../services/geminiService';
 import MapVisual from './MapVisual';
@@ -28,18 +28,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
   const [pushTarget, setPushTarget] = useState<'ALL' | 'DRIVERS' | 'PASSENGERS'>('ALL');
   const [pushLoading, setPushLoading] = useState(false);
 
-  // DATOS DE MUESTRA
-  const [mockDrivers] = useState([
-    { id: '1', full_name: 'Roberto Gómez', car_model: 'Nissan Tsuru', car_plate: 'TX-102', rating: 4.9, status: 'online', verification_status: 'verified', trips: 1250 },
-    { id: '2', full_name: 'Elena Rodríguez', car_model: 'Hyundai Accent', car_plate: 'TX-554', rating: 4.8, status: 'busy', verification_status: 'verified', trips: 840 },
-    { id: '3', full_name: 'Marcos Solis', car_model: 'Toyota Yaris', car_plate: 'TX-009', rating: 3.5, status: 'offline', verification_status: 'pending', trips: 12 },
-    { id: '4', full_name: 'Lucía Fernández', car_model: 'Chevrolet Aveo', car_plate: 'TX-882', rating: 5.0, status: 'online', verification_status: 'verified', trips: 2100 }
-  ]);
+  // DATOS DE MUESTRA MEJORADOS
+  const mockDrivers = [
+    { id: '1', full_name: 'Roberto Gómez', car_model: 'Nissan Tsuru', car_plate: 'TX-102', rating: 4.9, status: 'online', email: 'roberto@zippy.mx', trips: 1250 },
+    { id: '2', full_name: 'Elena Rodríguez', car_model: 'Hyundai Accent', car_plate: 'TX-554', rating: 4.8, status: 'busy', email: 'elena@zippy.mx', trips: 840 },
+    { id: '3', full_name: 'Marcos Solis', car_model: 'Toyota Yaris', car_plate: 'TX-009', rating: 3.5, status: 'offline', email: 'marcos@zippy.mx', trips: 12 },
+    { id: '4', full_name: 'Lucía Fernández', car_model: 'Chevrolet Aveo', car_plate: 'TX-882', rating: 5.0, status: 'online', email: 'lucia@zippy.mx', trips: 2100 }
+  ];
 
-  const [mockPassengers] = useState([
+  const mockPassengers = [
     { id: 'p1', full_name: 'Carlos Slim', email: 'carlos@mail.com', trips: 45, rating: 5.0, status: 'online' },
-    { id: 'p2', full_name: 'Ximena Duque', email: 'ximena@mail.com', trips: 12, rating: 4.7, status: 'offline' }
-  ]);
+    { id: 'p2', full_name: 'Ximena Duque', email: 'ximena@mail.com', trips: 12, rating: 4.7, status: 'offline' },
+    { id: 'p3', full_name: 'Juan Osorio', email: 'josorio@mail.com', trips: 150, rating: 4.9, status: 'online' },
+    { id: 'p4', full_name: 'Beatriz Ramos', email: 'bramos@mail.com', trips: 8, rating: 4.5, status: 'online' }
+  ];
 
   const handleSendPush = async () => {
       if (!pushTitle.trim() || !pushMessage.trim()) return alert("Por favor completa el título y el mensaje.");
@@ -51,27 +53,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
               target: pushTarget
           });
           if (error) throw error;
-          alert(`Mensaje enviado con éxito a: ${pushTarget === 'ALL' ? 'Toda la red Zippy' : pushTarget === 'DRIVERS' ? 'Conductores' : 'Pasajeros'}`);
+          alert(`Mensaje enviado con éxito.`);
           setPushTitle('');
           setPushMessage('');
-      } catch (e: any) {
-          alert("Error al enviar: " + e.message);
-      } finally {
-          setPushLoading(false);
-      }
+      } catch (e: any) { alert("Error: " + e.message); } finally { setPushLoading(false); }
   };
 
   useEffect(() => {
     if (activeTab !== 'live_map') return;
-    const center = { lat: 19.4326, lng: -99.1332 };
-    const entities: MapEntity[] = [
-        ...mockDrivers.filter(d => d.status !== 'offline').map(d => ({
-            id: d.id, type: 'driver' as const, label: `${d.full_name} (${d.car_plate})`, 
-            lat: center.lat + (Math.random() - 0.5) * 0.01, lng: center.lng + (Math.random() - 0.5) * 0.01,
-            status: d.status
-        }))
-    ];
-    setLiveEntities(entities);
+    const updateEntities = () => {
+        const center = { lat: 19.4326, lng: -99.1332 };
+        const entities: MapEntity[] = [
+            ...mockDrivers.filter(d => d.status !== 'offline').map(d => ({
+                id: d.id, type: 'driver' as const, label: `${d.full_name} (${d.car_plate})`, 
+                lat: center.lat + (Math.random() - 0.5) * 0.015, lng: center.lng + (Math.random() - 0.5) * 0.015,
+                status: d.status
+            })),
+            ...mockPassengers.filter(p => p.status === 'online').map(p => ({
+                id: p.id, type: 'passenger' as const, label: p.full_name,
+                lat: center.lat + (Math.random() - 0.5) * 0.015, lng: center.lng + (Math.random() - 0.5) * 0.015,
+                status: 'online'
+            }))
+        ];
+        setLiveEntities(entities);
+    };
+    updateEntities();
+    const interval = setInterval(updateEntities, 4000);
+    return () => clearInterval(interval);
   }, [activeTab]);
 
   const SidebarItem = ({ id, icon: Icon, label, badge }: any) => (
@@ -85,15 +93,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
   return (
     <div className="w-full h-full bg-gray-50 flex relative overflow-hidden font-sans">
       {/* SIDEBAR */}
-      <div className={`fixed md:relative inset-y-0 left-0 z-50 w-72 bg-zippy-main flex flex-col transition-transform duration-500 ease-in-out border-r border-zippy-dark/5 shadow-2xl ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+      <div className={`fixed md:relative inset-y-0 left-0 z-50 w-72 bg-zippy-main flex flex-col transition-transform duration-500 border-r border-zippy-dark/5 shadow-2xl ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="p-8 flex justify-between items-center">
-           <img src="https://tritex.com.mx/zippylogo.png" alt="Zippy Admin" className="h-10 object-contain drop-shadow-md" />
+           <img src="https://tritex.com.mx/zippylogo.png" alt="Zippy Admin" className="h-10 object-contain" />
            <button onClick={() => setSidebarOpen(false)} className="md:hidden text-zippy-dark"><X /></button>
         </div>
-        
-        <nav className="flex-1 px-4 space-y-8 overflow-y-auto">
+        <nav className="flex-1 px-4 space-y-4">
            <div>
-               <p className="text-[10px] font-black text-zippy-dark/30 uppercase tracking-[0.2em] mb-4 px-4">Operaciones</p>
+               <p className="text-[10px] font-black text-zippy-dark/30 uppercase tracking-[0.2em] mb-4 px-4">Centro de Control</p>
                <SidebarItem id="dashboard" icon={LayoutDashboard} label="Resumen" />
                <SidebarItem id="live_map" icon={Map} label="Mapa Real" badge="LIVE" />
                <SidebarItem id="push" icon={BellRing} label="Push Masivo" />
@@ -104,112 +111,107 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
                <SidebarItem id="users" icon={Users} label="Pasajeros" />
            </div>
         </nav>
-        
         <div className="p-6">
-             <button onClick={onBack} className="w-full flex items-center justify-center gap-3 p-4 text-red-600 bg-red-50 hover:bg-red-100 rounded-3xl font-black transition-colors shadow-sm">
-                <LogOut size={20} /> CERRAR PANEL
+             <button onClick={onBack} className="w-full flex items-center justify-center gap-3 p-4 text-red-600 bg-red-50 hover:bg-red-100 rounded-3xl font-black transition-colors">
+                <LogOut size={20} /> SALIR
              </button>
         </div>
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white p-6 shadow-sm flex justify-between items-center z-10 border-b border-gray-100">
+        <header className="bg-white p-6 shadow-sm flex justify-between items-center z-10">
             <div className="flex items-center gap-4">
                 <button onClick={()=>setSidebarOpen(true)} className="md:hidden p-2 text-zippy-dark"><Menu /></button>
-                <h1 className="text-2xl font-black text-zippy-dark uppercase tracking-tight">{activeTab.replace('_', ' ')}</h1>
+                <h1 className="text-2xl font-black text-zippy-dark uppercase tracking-tight">{activeTab}</h1>
             </div>
-            <div className="flex items-center gap-4">
-                <div className="text-right hidden sm:block">
-                    <p className="text-xs font-black text-zippy-dark/40 uppercase">Admin de Turno</p>
-                    <p className="text-sm font-black text-zippy-dark">Zippy HQ Control</p>
-                </div>
-                <div className="w-10 h-10 bg-zippy-dark rounded-2xl flex items-center justify-center text-white font-black">AD</div>
-            </div>
+            <div className="w-10 h-10 bg-zippy-dark rounded-2xl flex items-center justify-center text-white font-black">AD</div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-10">
+        <main className="flex-1 overflow-y-auto relative">
             {activeTab === 'dashboard' && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-fade-in">
-                    <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 hover:shadow-xl transition-shadow">
-                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4"><Car size={24} /></div>
-                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest">Conductores</p>
-                        <h3 className="text-4xl font-black text-zippy-dark mt-1">{mockDrivers.length}</h3>
+                <div className="p-10 grid grid-cols-1 md:grid-cols-4 gap-6 animate-fade-in">
+                    <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
+                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Conductores</p>
+                        <h3 className="text-4xl font-black text-zippy-dark">{mockDrivers.length}</h3>
+                    </div>
+                    <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
+                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Pasajeros</p>
+                        <h3 className="text-4xl font-black text-zippy-dark">{mockPassengers.length}</h3>
+                    </div>
+                    <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
+                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Viajes Hoy</p>
+                        <h3 className="text-4xl font-black text-zippy-dark">128</h3>
+                    </div>
+                    <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
+                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Ingresos</p>
+                        <h3 className="text-4xl font-black text-zippy-dark">$45k</h3>
                     </div>
                 </div>
             )}
 
-            {/* --- PUSH SYSTEM --- */}
-            {activeTab === 'push' && (
-                <div className="max-w-4xl mx-auto animate-slide-up">
-                    <div className="bg-white rounded-[40px] shadow-2xl overflow-hidden border border-gray-100">
-                        <div className="bg-zippy-dark p-12 text-white relative overflow-hidden">
-                            <div className="absolute top-[-20px] right-[-20px] p-10 opacity-10 rotate-12 scale-150"><BellRing size={200} /></div>
-                            <h2 className="text-4xl font-black mb-3">Push Broadcast</h2>
-                            <p className="text-white/60 font-bold text-lg">Comunicación instantánea con toda la plataforma Zippy.</p>
+            {activeTab === 'live_map' && (
+                <div className="absolute inset-0 animate-fade-in">
+                    <MapVisual status="live_map" entities={liveEntities} />
+                    <div className="absolute top-6 left-6 z-20 bg-white/90 backdrop-blur-md p-6 rounded-[32px] shadow-2xl">
+                        <h3 className="text-xs font-black text-zippy-dark uppercase tracking-widest mb-4">Monitor de Red</h3>
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-xs font-bold text-gray-600">
+                                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div> Conductores en ruta
+                            </div>
+                            <div className="flex items-center gap-2 text-xs font-bold text-gray-600">
+                                <div className="w-3 h-3 bg-zippy-main rounded-full"></div> Pasajeros buscando
+                            </div>
                         </div>
-                        
-                        <div className="p-10 space-y-10">
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-[0.2em]">Seleccionar Destinatarios</label>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {(['ALL', 'DRIVERS', 'PASSENGERS'] as const).map(target => (
-                                        <button 
-                                            key={target}
-                                            onClick={() => setPushTarget(target)}
-                                            className={`p-5 rounded-3xl border-2 transition-all font-black text-sm flex items-center justify-center gap-3 ${
-                                                pushTarget === target ? 'bg-zippy-main border-zippy-main text-zippy-dark shadow-xl scale-[1.02]' : 'bg-white border-gray-100 text-gray-400 hover:border-zippy-main/30'
-                                            }`}
-                                        >
-                                            {target === 'ALL' && <Users size={18}/>}
-                                            {target === 'DRIVERS' && <Car size={18}/>}
-                                            {target === 'PASSENGERS' && <Users size={18}/>}
-                                            {target === 'ALL' ? 'TODOS' : target === 'DRIVERS' ? 'CONDUCTORES' : 'PASAJEROS'}
-                                        </button>
+                    </div>
+                </div>
+            )}
+
+            {(activeTab === 'drivers' || activeTab === 'users') && (
+                <div className="p-10 animate-fade-in">
+                    <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                    <tr>
+                                        <th className="px-8 py-6">Usuario</th>
+                                        <th className="px-8 py-6">Info</th>
+                                        <th className="px-8 py-6">Viajes</th>
+                                        <th className="px-8 py-6">Rating</th>
+                                        <th className="px-8 py-6">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {(activeTab === 'drivers' ? mockDrivers : mockPassengers).map((user: any) => (
+                                        <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-gray-100 rounded-2xl overflow-hidden">
+                                                        <img src={`https://ui-avatars.com/api/?name=${user.full_name}&background=random`} alt="U" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-black text-zippy-dark">{user.full_name}</p>
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase">{user.email}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6 font-bold text-xs text-gray-600">
+                                                {user.car_model ? `${user.car_model} (${user.car_plate})` : 'Pasajero VIP'}
+                                            </td>
+                                            <td className="px-8 py-6 font-black text-zippy-dark">{user.trips}</td>
+                                            <td className="px-8 py-6 font-black text-yellow-600 flex items-center gap-1">
+                                                <Star size={14} fill="currentColor" /> {user.rating}
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                                    user.status === 'online' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                                                }`}>
+                                                    {user.status}
+                                                </span>
+                                            </td>
+                                        </tr>
                                     ))}
-                                </div>
-                            </div>
-
-                            <div className="space-y-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-[0.2em]">Asunto / Título</label>
-                                    <input 
-                                        value={pushTitle} 
-                                        onChange={e=>setPushTitle(e.target.value)}
-                                        placeholder="Ej. Bono Nocturno Activado" 
-                                        className="w-full p-6 bg-gray-50 border border-gray-100 rounded-3xl outline-none focus:border-zippy-main font-black text-lg placeholder:text-gray-300" 
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-gray-400 ml-1 tracking-[0.2em]">Cuerpo del Mensaje</label>
-                                    <textarea 
-                                        rows={5}
-                                        value={pushMessage} 
-                                        onChange={e=>setPushMessage(e.target.value)}
-                                        placeholder="Escribe el mensaje que recibirá el usuario..." 
-                                        className="w-full p-6 bg-gray-50 border border-gray-100 rounded-3xl outline-none focus:border-zippy-main font-bold resize-none text-lg placeholder:text-gray-300" 
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-5 p-8 bg-blue-50 rounded-[32px] text-blue-800 border border-blue-100 shadow-inner">
-                                <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-lg"><Info size={24} /></div>
-                                <p className="text-sm font-bold leading-relaxed">
-                                    Esta alerta aparecerá instantáneamente en las pantallas de los usuarios seleccionados, bloqueando otras acciones hasta que sea leída. Úsala para avisos críticos de seguridad o promociones.
-                                </p>
-                            </div>
-
-                            <button 
-                                onClick={handleSendPush}
-                                disabled={pushLoading}
-                                className="w-full bg-zippy-dark text-white font-black py-7 rounded-[32px] text-xl shadow-2xl hover:bg-zippy-light transition-all flex items-center justify-center gap-4 disabled:opacity-50 active:scale-95 group"
-                            >
-                                {pushLoading ? <Loader2 className="animate-spin" /> : (
-                                    <>
-                                        <Send size={28} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" /> 
-                                        LANZAR NOTIFICACIÓN PUSH
-                                    </>
-                                )}
-                            </button>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
