@@ -1,3 +1,4 @@
+
 declare namespace NodeJS {
   interface ProcessEnv {
     API_KEY: string;
@@ -5,8 +6,8 @@ declare namespace NodeJS {
 }
 
 interface Window {
-  // Re-added readonly modifier to match the global definition and fix the "identical modifiers" error.
-  readonly aistudio: {
+  // Removed readonly to fix "identical modifiers" error with standard Window interface augmentation
+  aistudio: {
     hasSelectedApiKey: () => Promise<boolean>;
     openSelectKey: () => Promise<void>;
   };
