@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, User, History, CreditCard, LogOut, Map, Wrench, Siren, Car, Briefcase } from 'lucide-react';
+import { X, User, History, CreditCard, LogOut, Map, Wrench, Siren, Car, Briefcase, Clock, AlertTriangle } from 'lucide-react';
 
 interface DrawerProps {
   isOpen: boolean;
@@ -9,27 +9,67 @@ interface DrawerProps {
   currentView: string;
   onChangeView: (view: 'home' | 'profile' | 'history' | 'payment' | 'services') => void;
   onOpenEmergency: () => void;
-  onOpenDriverReg: () => void; // Nuevo prop
+  onOpenDriverReg: () => void;
   userName?: string;
+  driverApplicationStatus: string | null;
+  onOpenDriverStatus: () => void;
 }
 
 const Drawer: React.FC<DrawerProps> = ({ 
-  isOpen, onClose, onLogout, onChangeView, onOpenEmergency, onOpenDriverReg, currentView, userName = "Usuario" 
+  isOpen, onClose, onLogout, onChangeView, onOpenEmergency, onOpenDriverReg, 
+  currentView, userName = "Usuario", driverApplicationStatus, onOpenDriverStatus 
 }) => {
   const handleNav = (view: 'home' | 'profile' | 'history' | 'payment' | 'services') => {
     onChangeView(view);
     onClose();
   };
 
+  const renderDriverButton = () => {
+    switch (driverApplicationStatus) {
+      case 'pending':
+      case 'pending_revision':
+        return (
+          <button 
+            onClick={() => { onOpenDriverStatus(); onClose(); }}
+            className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium text-zippy-dark bg-yellow-400/20 hover:bg-yellow-400/40"
+          >
+            <Clock className="w-5 h-5 text-yellow-700 animate-pulse" />
+            <span className="font-bold">Solicitud en Revisión</span>
+          </button>
+        );
+      case 'rejected':
+         return (
+          <button 
+            onClick={() => { onOpenDriverStatus(); onClose(); }}
+            className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium text-zippy-dark bg-red-400/20 hover:bg-red-400/40"
+          >
+            <AlertTriangle className="w-5 h-5 text-red-700" />
+            <span className="font-bold">Solicitud Rechazada</span>
+          </button>
+        );
+      case 'verified':
+        return null; 
+      case 'unverified':
+      default:
+        return (
+          <button 
+            onClick={() => { onOpenDriverReg(); onClose(); }}
+            className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium text-zippy-dark hover:bg-zippy-accent/20"
+          >
+            <Car className="w-5 h-5" />
+            <span>Quiero ser Conductor</span>
+          </button>
+        );
+    }
+  };
+
   return (
     <>
-      {/* Overlay */}
       <div 
         className={`fixed inset-0 bg-zippy-dark/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
       />
       
-      {/* Drawer - GREEN */}
       <div 
         className={`fixed top-0 left-0 w-3/4 max-w-xs h-full bg-zippy-main z-50 transform transition-transform duration-300 ease-out shadow-2xl border-r border-white/20 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
@@ -54,66 +94,38 @@ const Drawer: React.FC<DrawerProps> = ({
           </div>
 
           <nav className="flex-1 space-y-2">
-            <button 
-                onClick={() => handleNav('home')} 
-                className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium ${currentView === 'home' ? 'bg-white/20 text-zippy-dark font-bold' : 'text-zippy-dark hover:bg-white/10'}`}
-            >
+            <button onClick={() => handleNav('home')} className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium ${currentView === 'home' ? 'bg-white/20 text-zippy-dark font-bold' : 'text-zippy-dark hover:bg-white/10'}`}>
                 <Map className="w-5 h-5" />
                 <span>Mapa / Viaje</span>
             </button>
-            <button 
-                onClick={() => handleNav('services')} 
-                className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium ${currentView === 'services' ? 'bg-white/20 text-zippy-dark font-bold' : 'text-zippy-dark hover:bg-white/10'}`}
-            >
+            <button onClick={() => handleNav('services')} className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium ${currentView === 'services' ? 'bg-white/20 text-zippy-dark font-bold' : 'text-zippy-dark hover:bg-white/10'}`}>
                 <Wrench className="w-5 h-5" />
                 <span>Asistencia y Servicios</span>
             </button>
-            <button 
-                onClick={() => { onOpenEmergency(); onClose(); }}
-                className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium text-red-600 bg-red-50 hover:bg-red-100"
-            >
+            <button onClick={() => { onOpenEmergency(); onClose(); }} className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium text-red-600 bg-red-50 hover:bg-red-100">
                 <Siren className="w-5 h-5 animate-pulse" />
                 <span className="font-bold">Números de Emergencia</span>
             </button>
             
             <div className="h-px bg-zippy-dark/10 my-2"></div>
             
-            <button 
-                onClick={() => handleNav('profile')} 
-                className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium ${currentView === 'profile' ? 'bg-white/20 text-zippy-dark font-bold' : 'text-zippy-dark hover:bg-white/10'}`}
-            >
+            <button onClick={() => handleNav('profile')} className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium ${currentView === 'profile' ? 'bg-white/20 text-zippy-dark font-bold' : 'text-zippy-dark hover:bg-white/10'}`}>
                 <User className="w-5 h-5" />
                 <span>Mi Perfil</span>
             </button>
-            <button 
-                onClick={() => handleNav('history')} 
-                className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium ${currentView === 'history' ? 'bg-white/20 text-zippy-dark font-bold' : 'text-zippy-dark hover:bg-white/10'}`}
-            >
+            <button onClick={() => handleNav('history')} className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium ${currentView === 'history' ? 'bg-white/20 text-zippy-dark font-bold' : 'text-zippy-dark hover:bg-white/10'}`}>
                 <History className="w-5 h-5" />
                 <span>Mis Viajes</span>
             </button>
-            <button 
-                onClick={() => handleNav('payment')} 
-                className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium ${currentView === 'payment' ? 'bg-white/20 text-zippy-dark font-bold' : 'text-zippy-dark hover:bg-white/10'}`}
-            >
+            <button onClick={() => handleNav('payment')} className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium ${currentView === 'payment' ? 'bg-white/20 text-zippy-dark font-bold' : 'text-zippy-dark hover:bg-white/10'}`}>
                 <CreditCard className="w-5 h-5" />
                 <span>Pago y Billetera</span>
             </button>
-
-            {/* UPSELL SECTION */}
+            
             <div className="mt-6 mb-2">
                 <p className="text-xs font-bold text-zippy-dark/50 uppercase px-3 mb-2">Trabaja con Zippy</p>
-                <button 
-                    onClick={() => { onOpenDriverReg(); onClose(); }}
-                    className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium text-zippy-dark hover:bg-zippy-accent/20"
-                >
-                    <Car className="w-5 h-5" />
-                    <span>Quiero ser Conductor</span>
-                </button>
-                <button 
-                    onClick={() => { alert("Funcionalidad de registro de proveedores disponible próximamente."); }}
-                    className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium text-zippy-dark hover:bg-zippy-accent/20"
-                >
+                {renderDriverButton()}
+                <button onClick={() => { alert("Funcionalidad de registro de proveedores disponible próximamente."); }} className="w-full flex items-center gap-4 p-3 rounded-lg transition-colors text-left font-medium text-zippy-dark hover:bg-zippy-accent/20">
                     <Briefcase className="w-5 h-5" />
                     <span>Quiero ser Proveedor</span>
                 </button>
@@ -121,10 +133,7 @@ const Drawer: React.FC<DrawerProps> = ({
           </nav>
 
           <div className="mt-auto pt-6 border-t border-zippy-dark/10">
-             <button 
-                onClick={onLogout}
-                className="w-full flex items-center gap-4 p-3 text-red-600 hover:bg-red-500/10 rounded-lg transition-colors font-bold"
-             >
+             <button onClick={onLogout} className="w-full flex items-center gap-4 p-3 text-red-600 hover:bg-red-500/10 rounded-lg transition-colors font-bold">
                 <LogOut className="w-5 h-5" />
                 <span>Cerrar Sesión</span>
              </button>

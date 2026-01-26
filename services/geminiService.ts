@@ -10,17 +10,17 @@ const getClient = () => {
 /**
  * Gets smart price advice for a ride request using Gemini.
  */
-export const getSmartPriceAdvice = async (pickup: string, destination: string, userOffer: number): Promise<{ advice: string, successProbability: number }> => {
+export const getSmartPriceAdvice = async (pickup: string, destination: string, userTarifa: number): Promise<{ advice: string, successProbability: number }> => {
   const ai = getClient();
-  if (!ai) return { advice: "Sigue con tu oferta.", successProbability: 50 };
+  if (!ai) return { advice: "Sigue con tu tarifa.", successProbability: 50 };
 
   try {
     const prompt = `
       Eres el algoritmo de precios de "Zippy". 
-      Origen: ${pickup}. Destino: ${destination}. Oferta del usuario: $${userOffer}.
+      Origen: ${pickup}. Destino: ${destination}. Tarifa propuesta por el usuario: $${userTarifa}.
       Calcula:
-      1. Un consejo breve (10 palabras) en español.
-      2. Una probabilidad de aceptación (0-100) basada en que $${userOffer} sea bajo o alto.
+      1. Un consejo breve (10 palabras) en español sobre si la tarifa es justa.
+      2. Una probabilidad de aceptación (0-100) basada en que $${userTarifa} sea bajo o alto para el mercado.
     `;
     // Configured responseSchema for more reliable JSON extraction as per guidelines
     const response = await ai.models.generateContent({ 
@@ -33,7 +33,7 @@ export const getSmartPriceAdvice = async (pickup: string, destination: string, u
           properties: {
             advice: {
               type: Type.STRING,
-              description: 'Breve consejo sobre el precio.',
+              description: 'Breve consejo sobre la tarifa.',
             },
             prob: {
               type: Type.NUMBER,
@@ -52,7 +52,7 @@ export const getSmartPriceAdvice = async (pickup: string, destination: string, u
     return { advice: data.advice, successProbability: data.prob };
   } catch (error) {
     console.error("AI Price Advice Error:", error);
-    return { advice: "Los conductores están activos, intenta esta oferta.", successProbability: 75 };
+    return { advice: "Los conductores están activos, intenta esta tarifa.", successProbability: 75 };
   }
 };
 
@@ -67,7 +67,7 @@ export const chatWithZippy = async (message: string, history: any[]): Promise<st
      const chat = ai.chats.create({
         model: 'gemini-3-flash-preview',
         history: history,
-        config: { systemInstruction: "Eres Zippy, el asistente inteligente de una app de taxis que supera a Uber. Eres amable, eficiente y experto en movilidad urbana. Responde en Español." }
+        config: { systemInstruction: "Eres Zippy, el asistente inteligente de una app de taxis que supera a Uber. Eres amable, eficiente y experto en movilidad urbana. Siempre utiliza el término 'Tarifa' en lugar de 'Oferta' al hablar de precios. Responde en Español." }
      });
      // Using sendMessage for conversational turn
      const result = await chat.sendMessage({ message });

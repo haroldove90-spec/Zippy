@@ -4,8 +4,8 @@
   "short_name": "Zippy",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#A9D300",
-  "theme_color": "#A9D300",
+  "background_color": "#FDCA01",
+  "theme_color": "#FDCA01",
   "description": "El Taxi que va contigo",
   "orientation": "portrait",
   "icons": [

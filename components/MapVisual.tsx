@@ -8,37 +8,30 @@ interface MapVisualProps {
   status: string;
   customRoute?: [number, number][]; 
   userLocation?: [number, number]; 
-  entities?: MapEntity[]; // Nuevas entidades para el mapa en vivo
+  entities?: MapEntity[]; 
+  routeStart?: [number, number]; // New prop for explicit route start
+  routeEnd?: [number, number];   // New prop for explicit route end
 }
 
-const MapVisual: React.FC<MapVisualProps> = ({ status, customRoute, userLocation, entities }) => {
+const MapVisual: React.FC<MapVisualProps> = ({ status, customRoute, userLocation, entities, routeStart, routeEnd }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const routeLineRef = useRef<L.Polyline | null>(null);
-  const heatLayerRef = useRef<L.LayerGroup | null>(null);
   const entitiesLayerRef = useRef<L.LayerGroup | null>(null);
   const entityMarkersRef = useRef<Map<string, L.Marker>>(new Map());
+  const routeMarkersRef = useRef<L.LayerGroup | null>(null);
   
   const hasCenteredRef = useRef(false);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
-
-  const MOCK_ROUTE: [number, number][] = [
-    [19.4326, -99.1332],
-    [19.4310, -99.1330],
-    [19.4300, -99.1350],
-    [19.4290, -99.1360],
-    [19.4280, -99.1380],
-    [19.4270, -99.1400], 
-  ];
 
   // --- INITIALIZE MAP ---
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-        const defaultLat = 19.4326; 
-        const defaultLng = -99.1332;
+        const defaultLat = 19.5437; // Tlalnepantla Default
+        const defaultLng = -99.1962;
 
         const map = L.map(mapContainerRef.current, {
             zoomControl: false, 
@@ -54,6 +47,7 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, customRoute, userLocation
 
         mapInstanceRef.current = map;
         entitiesLayerRef.current = L.layerGroup().addTo(map);
+        routeMarkersRef.current = L.layerGroup().addTo(map);
         
         if (!status.startsWith('ADMIN')) {
             const userIcon = L.divIcon({
@@ -69,7 +63,7 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, customRoute, userLocation
                 iconSize: [24, 24],
                 iconAnchor: [12, 12]
             });
-            const marker = L.marker([defaultLat, defaultLng], { icon: userIcon }).addTo(map);
+            const marker = L.marker([defaultLat, defaultLng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
             userMarkerRef.current = marker;
         }
 
@@ -121,21 +115,17 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, customRoute, userLocation
       }
   };
 
-  // --- HANDLE LIVE ENTITIES (ADMIN) ---
+  // --- HANDLE LIVE ENTITIES ---
   useEffect(() => {
     const layer = entitiesLayerRef.current;
-    if (!layer || status !== 'live_map') {
+    if (!layer || (status !== 'live_map' && status !== 'IDLE')) {
         entityMarkersRef.current.forEach(m => m.remove());
         entityMarkersRef.current.clear();
         return;
     }
-
     if (!entities) return;
 
-    // Actualizar marcadores existentes o crear nuevos
     const currentIds = new Set(entities.map(e => e.id));
-    
-    // Eliminar los que ya no están
     entityMarkersRef.current.forEach((marker, id) => {
         if (!currentIds.has(id)) {
             marker.remove();
@@ -147,25 +137,14 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, customRoute, userLocation
         const existingMarker = entityMarkersRef.current.get(entity.id);
         const iconHtml = `
             <div class="relative group">
-                <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-zippy-dark text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl z-50">
-                    ${entity.label}
-                </div>
                 <div class="w-10 h-10 rounded-full border-2 border-white shadow-lg flex items-center justify-center ${
-                    entity.type === 'driver' ? 'bg-zippy-dark text-zippy-main' : 
-                    entity.type === 'passenger' ? 'bg-zippy-main text-zippy-dark' : 'bg-orange-500 text-white'
+                    entity.type === 'driver' ? 'bg-zippy-dark text-zippy-main' : 'bg-zippy-main text-zippy-dark'
                 }">
-                    <span class="text-xs font-black">${entity.type === 'driver' ? '🚕' : entity.type === 'passenger' ? '👤' : '🛠️'}</span>
+                    <span class="text-xs font-black">${entity.type === 'driver' ? '🚕' : '👤'}</span>
                 </div>
-                ${entity.status === 'online' ? '<span class="absolute top-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>' : ''}
             </div>
         `;
-
-        const icon = L.divIcon({
-            className: 'live-entity-icon',
-            html: iconHtml,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
-        });
+        const icon = L.divIcon({ className: 'live-entity-icon', html: iconHtml, iconSize: [40, 40], iconAnchor: [20, 20] });
 
         if (existingMarker) {
             existingMarker.setLatLng([entity.lat, entity.lng]);
@@ -175,64 +154,72 @@ const MapVisual: React.FC<MapVisualProps> = ({ status, customRoute, userLocation
             entityMarkersRef.current.set(entity.id, marker);
         }
     });
-
   }, [entities, status]);
 
-  // --- EFFECT: LAYERS & ROUTES ---
+  // --- REAL ROUTING LOGIC (OSRM) ---
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
+    // Cleanup previous route
     if (routeLineRef.current) {
         routeLineRef.current.remove();
         routeLineRef.current = null;
     }
-    if (heatLayerRef.current) {
-        heatLayerRef.current.remove();
-        heatLayerRef.current = null;
+    routeMarkersRef.current?.clearLayers();
+
+    // Determine start/end points
+    let start: [number, number] | undefined = routeStart;
+    let end: [number, number] | undefined = routeEnd;
+
+    // Smart defaults based on status if props are missing
+    if (!start && !end && status !== 'IDLE') {
+        // Fallback or custom logic if needed
     }
 
-    if (status === 'ADMIN_HEATMAP') {
-        const heatGroup = L.layerGroup().addTo(map);
-        const center = [19.4326, -99.1332];
-        for (let i = 0; i < 50; i++) {
-            const lat = center[0] + (Math.random() - 0.5) * 0.04;
-            const lng = center[1] + (Math.random() - 0.5) * 0.04;
-            const intensity = Math.random();
-            const color = intensity > 0.7 ? '#ef4444' : intensity > 0.4 ? '#eab308' : '#22c55e';
-            
-            L.circle([lat, lng], {
-                color: 'transparent',
-                fillColor: color,
-                fillOpacity: 0.4,
-                radius: 300 * intensity
-            }).addTo(heatGroup);
-        }
-        heatLayerRef.current = heatGroup;
-        map.setView([19.4326, -99.1332], 13);
+    if (start && end) {
+        const fetchRoute = async () => {
+            try {
+                // OSRM Public API (Demo server)
+                const response = await fetch(
+                    `https://router.project-osrm.org/route/v1/driving/${start![1]},${start![0]};${end![1]},${end![0]}?overview=full&geometries=geojson`
+                );
+                const data = await response.json();
+
+                if (data.routes && data.routes.length > 0) {
+                    const coordinates = data.routes[0].geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]); // Swap to LatLng
+                    
+                    if (routeLineRef.current) routeLineRef.current.remove();
+                    
+                    routeLineRef.current = L.polyline(coordinates, {
+                        color: '#003A70',
+                        weight: 6,
+                        opacity: 0.8,
+                        lineCap: 'round',
+                        lineJoin: 'round'
+                    }).addTo(map);
+
+                    // Add Start/End Markers
+                    const startIcon = L.divIcon({ html: '<div class="w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-md"></div>', className: '' });
+                    const endIcon = L.divIcon({ html: '<div class="w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-md"></div>', className: '' });
+
+                    L.marker(start!, { icon: startIcon }).addTo(routeMarkersRef.current!);
+                    L.marker(end!, { icon: endIcon }).addTo(routeMarkersRef.current!);
+
+                    // Fit bounds with padding
+                    map.fitBounds(L.latLngBounds(coordinates), { padding: [50, 50] });
+                }
+            } catch (error) {
+                console.error("Routing error:", error);
+                // Fallback to straight line
+                routeLineRef.current = L.polyline([start!, end!], { color: '#003A70', weight: 4, dashArray: '10, 10' }).addTo(map);
+            }
+        };
+
+        fetchRoute();
     }
 
-    const activeStates = ['ACCEPTED', 'IN_PROGRESS', 'ARRIVED'];
-    const routeToDraw = customRoute || (activeStates.includes(status) ? MOCK_ROUTE : null);
-
-    if (routeToDraw) {
-        const polyline = L.polyline(routeToDraw, {
-            color: '#003A70', 
-            weight: 5,
-            opacity: 0.8,
-            lineCap: 'round'
-        }).addTo(map);
-        
-        if (customRoute) {
-            L.circleMarker(customRoute[0], { radius: 6, color: 'green', fillOpacity: 1 }).addTo(map);
-            L.circleMarker(customRoute[customRoute.length-1], { radius: 6, color: 'red', fillOpacity: 1 }).addTo(map);
-        }
-
-        routeLineRef.current = polyline;
-        map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-    }
-
-  }, [status, customRoute]);
+  }, [status, routeStart, routeEnd]);
 
   const handleCenterMap = () => {
     if (mapInstanceRef.current && userPos) {

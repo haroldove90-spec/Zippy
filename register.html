@@ -1,0 +1,313 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Registro Conductor Zippy Shield</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root { --zippy-main: #FDCA01; --zippy-dark: #003A70; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--zippy-dark); color: white; }
+        input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="password"] {
+            width: 100%; padding: 1rem; border-radius: 1rem; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1); color: white; font-weight: bold; outline: none;
+            transition: all 0.3s;
+        }
+        input:focus { border-color: var(--zippy-main); background: rgba(255,255,255,0.1); }
+        label { font-size: 0.7rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.6); margin-left: 0.5rem; margin-bottom: 0.25rem; display: block; }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+
+    <!-- Header -->
+    <div class="p-6 flex items-center justify-between bg-black/20 backdrop-blur-md z-10">
+        <img src="https://tritex.com.mx/zippyicono.png" class="h-8">
+        <div class="flex gap-2" id="steps">
+            <!-- Puntos de progreso inyectados por JS -->
+        </div>
+    </div>
+
+    <!-- Main Form Container -->
+    <div class="flex-1 overflow-y-auto relative">
+        <form id="regForm" class="p-6 pb-32 max-w-lg mx-auto space-y-8 animate-[fadeIn_0.5s]">
+            
+            <!-- STEP 1: IDENTIDAD -->
+            <div class="step-content" data-step="1">
+                <h2 class="text-2xl font-black mb-1">Identidad</h2>
+                <p class="text-xs opacity-60 mb-6">Iniciemos tu expediente digital seguro.</p>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label>Nombre Completo (Como en INE)</label>
+                        <input type="text" id="full_name" required>
+                    </div>
+                    <div>
+                        <label>Email</label>
+                        <input type="email" id="email" required placeholder="ejemplo@zippy.mx">
+                    </div>
+                    <div>
+                        <label>Contraseña</label>
+                        <input type="password" id="password" required placeholder="Mínimo 6 caracteres">
+                    </div>
+                    <div>
+                        <label>Teléfono Celular</label>
+                        <input type="tel" id="phone" required placeholder="10 dígitos">
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: DOCUMENTOS LEGALES (ZIPPY SHIELD) -->
+            <div class="step-content hidden" data-step="2">
+                <h2 class="text-2xl font-black mb-1">Documentación</h2>
+                <p class="text-xs opacity-60 mb-6">Fotos claras, sin flash y legibles.</p>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- INE FRENTE -->
+                    <div class="doc-upload" onclick="triggerFile('ine_front')">
+                        <label>INE Frente</label>
+                        <div class="h-24 bg-white/5 border-2 border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center hover:bg-white/10 transition cursor-pointer relative overflow-hidden" id="preview-ine_front">
+                            <i data-lucide="credit-card" class="text-white/50 mb-1"></i>
+                            <span class="text-[10px] font-bold opacity-50">SUBIR</span>
+                            <input type="file" id="file-ine_front" hidden accept="image/*" onchange="previewFile('ine_front')">
+                        </div>
+                    </div>
+                    <!-- INE REVERSO -->
+                    <div class="doc-upload" onclick="triggerFile('ine_back')">
+                        <label>INE Reverso</label>
+                        <div class="h-24 bg-white/5 border-2 border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center hover:bg-white/10 transition cursor-pointer relative overflow-hidden" id="preview-ine_back">
+                            <i data-lucide="credit-card" class="text-white/50 mb-1"></i>
+                            <span class="text-[10px] font-bold opacity-50">SUBIR</span>
+                            <input type="file" id="file-ine_back" hidden accept="image/*" onchange="previewFile('ine_back')">
+                        </div>
+                    </div>
+                    <!-- LICENCIA -->
+                    <div class="doc-upload col-span-2" onclick="triggerFile('license')">
+                        <label>Licencia de Conducir (Vigente)</label>
+                        <div class="h-24 bg-white/5 border-2 border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center hover:bg-white/10 transition cursor-pointer relative overflow-hidden" id="preview-license">
+                            <i data-lucide="user-check" class="text-white/50 mb-1"></i>
+                            <span class="text-[10px] font-bold opacity-50">SUBIR FOTO</span>
+                            <input type="file" id="file-license" hidden accept="image/*" onchange="previewFile('license')">
+                        </div>
+                    </div>
+                    <!-- VENCIMIENTO LICENCIA -->
+                    <div class="col-span-2">
+                        <label>Fecha Vencimiento Licencia</label>
+                        <input type="date" id="license_expiry" required class="text-white">
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: VEHÍCULO Y SEGURO -->
+            <div class="step-content hidden" data-step="3">
+                <h2 class="text-2xl font-black mb-1">Tu Unidad</h2>
+                <p class="text-xs opacity-60 mb-6">Datos del vehículo y seguro.</p>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                         <div>
+                            <label>Modelo</label>
+                            <input type="text" id="car_model" placeholder="Ej: Versa">
+                         </div>
+                         <div>
+                            <label>Año</label>
+                            <input type="text" id="car_year" placeholder="2020">
+                         </div>
+                    </div>
+                    <div>
+                        <label>Placas</label>
+                        <input type="text" id="car_plate" placeholder="ABC-123">
+                    </div>
+                    
+                    <!-- FOTOS AUTO -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="doc-upload" onclick="triggerFile('car_front')">
+                            <label>Auto Frente</label>
+                            <div class="h-24 bg-white/5 border-2 border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center hover:bg-white/10 transition cursor-pointer relative overflow-hidden" id="preview-car_front">
+                                <i data-lucide="car-front" class="text-white/50 mb-1"></i>
+                                <input type="file" id="file-car_front" hidden accept="image/*" onchange="previewFile('car_front')">
+                            </div>
+                        </div>
+                        <div class="doc-upload" onclick="triggerFile('insurance')">
+                            <label>Póliza Seguro</label>
+                            <div class="h-24 bg-white/5 border-2 border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center hover:bg-white/10 transition cursor-pointer relative overflow-hidden" id="preview-insurance">
+                                <i data-lucide="shield-check" class="text-white/50 mb-1"></i>
+                                <input type="file" id="file-insurance" hidden accept="image/*" onchange="previewFile('insurance')">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: BIOMETRÍA Y CONTRATO -->
+            <div class="step-content hidden" data-step="4">
+                <h2 class="text-2xl font-black mb-1">Verificación Final</h2>
+                <p class="text-xs opacity-60 mb-6">Selfie y Contrato Digital.</p>
+
+                <div class="doc-upload mb-6" onclick="triggerFile('selfie')">
+                    <label>Selfie (Rostro descubierto)</label>
+                    <div class="h-48 bg-white/5 border-2 border-dashed border-white/20 rounded-2xl flex flex-col items-center justify-center hover:bg-white/10 transition cursor-pointer relative overflow-hidden" id="preview-selfie">
+                        <i data-lucide="camera" class="w-8 h-8 text-white/50 mb-2"></i>
+                        <span class="text-[10px] font-bold opacity-50">TOMAR SELFIE</span>
+                        <input type="file" id="file-selfie" hidden accept="image/*" capture="user" onchange="previewFile('selfie')">
+                    </div>
+                </div>
+
+                <div class="bg-white/5 p-4 rounded-2xl h-32 overflow-y-auto mb-4 text-xs leading-relaxed text-justify border border-white/10">
+                    <p class="font-bold mb-2">CONTRATO DE ADHESIÓN CONDUCTOR ZIPPY</p>
+                    <p>Al hacer clic en finalizar, declaras que toda la información es real. Aceptas que Zippy verifique tus antecedentes penales y estatus legal de la licencia. El uso de documentos falsos resultará en bloqueo permanente y reporte a las autoridades.</p>
+                </div>
+
+                <label class="flex items-start gap-3 p-4 bg-[#FDCA01]/10 rounded-2xl border border-[#FDCA01] cursor-pointer">
+                    <input type="checkbox" id="contractCheck" class="mt-1 w-5 h-5 accent-[#FDCA01]">
+                    <span class="text-xs font-bold text-white">Acepto los Términos, Condiciones y Política de Privacidad. Entiendo que mi cuenta iniciará en "Revisión".</span>
+                </label>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="p-6 bg-black/20 backdrop-blur-md z-10 flex gap-4">
+        <button id="btnBack" class="flex-1 py-4 rounded-2xl bg-white/10 font-black text-xs uppercase hidden" onclick="changeStep(-1)">Atrás</button>
+        <button id="btnNext" class="flex-[2] py-4 rounded-2xl bg-[#FDCA01] text-[#003A70] font-black text-xs uppercase shadow-xl hover:scale-[1.02] transition-transform" onclick="changeStep(1)">Siguiente</button>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://ppdyxsfpvbuyeytxclnr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZHl4c2ZwdmJ1eWV5dHhjbG5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3NzQ0MDIsImV4cCI6MjA4MTM1MDQwMn0.ktAgiGtEPunWTAQiIeKK9tif6Tb6g_8n0aMxaFf92WA';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentStep = 1;
+        const totalSteps = 4;
+        const uploadedFiles = {}; 
+        lucide.createIcons();
+
+        function updateUI() {
+            const stepsContainer = document.getElementById('steps');
+            stepsContainer.innerHTML = '';
+            for(let i=1; i<=totalSteps; i++) {
+                const dot = document.createElement('div');
+                dot.className = `w-2 h-2 rounded-full transition-all ${i === currentStep ? 'bg-[#FDCA01] w-6' : 'bg-white/20'}`;
+                stepsContainer.appendChild(dot);
+            }
+            document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
+            document.querySelector(`.step-content[data-step="${currentStep}"]`).classList.remove('hidden');
+            document.getElementById('btnBack').classList.toggle('hidden', currentStep === 1);
+            document.getElementById('btnNext').innerText = currentStep === totalSteps ? 'ENVIAR SOLICITUD' : 'SIGUIENTE';
+        }
+
+        async function changeStep(dir) {
+            if (dir === 1) {
+                // Validaciones básicas por paso
+                if(currentStep === 1) {
+                    if(document.getElementById('password').value.length < 6) return alert("Contraseña muy corta");
+                    if(!document.getElementById('email').value) return alert("Email requerido");
+                }
+                if(currentStep === 4) {
+                    await submitRegistration();
+                    return;
+                }
+            }
+            currentStep += dir;
+            updateUI();
+        }
+
+        window.triggerFile = (id) => document.getElementById(`file-${id}`).click();
+        
+        window.previewFile = (id) => {
+            const file = document.getElementById(`file-${id}`).files[0];
+            if(file) {
+                uploadedFiles[id] = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const container = document.getElementById(`preview-${id}`);
+                    container.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover rounded-xl">`;
+                    container.classList.add('border-[#FDCA01]');
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        async function submitRegistration() {
+            if(!document.getElementById('contractCheck').checked) return alert("Acepta el contrato.");
+            
+            const btn = document.getElementById('btnNext');
+            btn.disabled = true;
+            btn.innerText = "SUBIENDO EXPEDIENTE...";
+
+            try {
+                // 1. Auth Sign Up
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const fullName = document.getElementById('full_name').value;
+
+                const { data: authData, error: authError } = await supabase.auth.signUp({
+                    email, password,
+                    options: { data: { full_name: fullName, role: 'DRIVER' } }
+                });
+                
+                if(authError) throw authError;
+                const userId = authData.user.id;
+
+                // 2. Subir Archivos y crear registros en tabla 'documents'
+                const fileKeys = Object.keys(uploadedFiles);
+                for (const key of fileKeys) {
+                    const file = uploadedFiles[key];
+                    const fileName = `shield/${userId}/${key}_${Date.now()}`;
+                    
+                    const { error: upError } = await supabase.storage.from('zippy-media').upload(fileName, file);
+                    if(upError) console.error(upError);
+                    
+                    const { data: { publicUrl } } = supabase.storage.from('zippy-media').getPublicUrl(fileName);
+
+                    let expiry = null;
+                    if(key === 'license') expiry = document.getElementById('license_expiry').value || null;
+
+                    await supabase.from('documents').insert({
+                        user_id: userId,
+                        document_type: key,
+                        file_url: publicUrl,
+                        status: 'pending',
+                        expiry_date: expiry
+                    });
+                }
+
+                // 3. Actualizar Perfil (Estatus Pendiente)
+                await supabase.from('profiles').update({
+                    full_name: fullName,
+                    phone: document.getElementById('phone').value,
+                    role: 'DRIVER',
+                    verification_status: 'pending_revision', // Clave para bloqueo
+                    contract_accepted: true,
+                    car_model: document.getElementById('car_model').value,
+                    car_plate: document.getElementById('car_plate').value
+                }).eq('id', userId);
+
+                // Éxito
+                document.body.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center bg-[#003A70] text-white p-10 text-center animate-slide-up">
+                        <div class="w-24 h-24 bg-[#FDCA01] rounded-full flex items-center justify-center text-[#003A70] mb-6 shadow-2xl">
+                            <i data-lucide="shield-check" width="48" height="48"></i>
+                        </div>
+                        <h1 class="text-3xl font-black mb-2">¡Solicitud en Revisión!</h1>
+                        <p class="opacity-70 mb-8">El equipo legal de Zippy está validando tus documentos. Te notificaremos cuando tu cuenta sea activada.</p>
+                        <a href="/" class="px-8 py-4 bg-white text-[#003A70] font-black rounded-xl uppercase tracking-widest text-xs">Entendido</a>
+                    </div>
+                `;
+                lucide.createIcons();
+
+            } catch (err) {
+                alert("Error: " + err.message);
+                btn.disabled = false;
+                btn.innerText = "REINTENTAR";
+            }
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>

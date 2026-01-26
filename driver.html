@@ -1,0 +1,209 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zippy Conductor</title>
+    
+    <!-- Librerías Externas -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root { --zippy-main: #FDCA01; --zippy-dark: #003A70; }
+        body { font-family: 'Inter', sans-serif; overflow: hidden; }
+        .map-container { position: absolute; top: 0; bottom: 0; left: 0; right: 0; z-index: 0; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen w-full flex">
+
+    <!-- Sidebar Verde -->
+    <aside class="w-20 md:w-64 bg-[#FDCA01] h-full flex flex-col shadow-2xl z-30 flex-shrink-0">
+        <div class="p-4 md:p-8 flex justify-center md:justify-start">
+            <img src="https://tritex.com.mx/zippylogo.png" class="h-8 object-contain">
+        </div>
+        <nav class="flex-1 px-2 md:px-4 space-y-2 mt-4">
+            <button class="w-full flex items-center justify-center md:justify-start gap-3 p-4 rounded-2xl bg-[#003A70] text-white shadow-lg">
+                <i data-lucide="map" class="w-6 h-6"></i> <span class="hidden md:inline font-bold">Mapa</span>
+            </button>
+        </nav>
+        <div class="p-4 mb-4">
+            <div class="bg-white/20 backdrop-blur-sm rounded-2xl p-3 flex flex-col items-center">
+                <img src="https://ui-avatars.com/api/?name=Carlos+M&background=003A70&color=fff" class="w-10 h-10 rounded-full border-2 border-white mb-2">
+                <p class="text-[#003A70] font-black text-xs hidden md:block">Carlos M.</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 relative h-full">
+        <div id="map" class="map-container bg-gray-200"></div>
+
+        <!-- Botón Estado -->
+        <div class="absolute top-4 right-4 z-[400]">
+            <button id="statusBtn" class="bg-[#003A70] text-white px-6 py-3 rounded-full font-black shadow-xl flex items-center gap-2 hover:scale-105 transition-transform">
+                <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div> EN LINEA
+            </button>
+        </div>
+
+        <!-- Panel Solicitudes -->
+        <div id="requestsPanel" class="absolute bottom-0 left-0 right-0 z-[400] p-4 pointer-events-none flex flex-col items-center justify-end h-[60vh]"></div>
+
+        <!-- Modal Perfil Seguro -->
+        <div id="passengerModal" class="hidden absolute inset-0 z-[500] bg-[#003A70]/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl animate-slide-up relative">
+                <button onclick="closeModal()" class="absolute top-4 right-4 p-2 bg-gray-100 rounded-full text-gray-500 z-10"><i data-lucide="x" class="w-5 h-5"></i></button>
+
+                <div class="bg-[#003A70] p-6 pt-10 text-center relative">
+                    <div class="relative z-10 flex flex-col items-center">
+                        <div class="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-[#FDCA01] to-white shadow-xl mb-3">
+                            <img id="modalPassengerPhoto" src="" class="w-full h-full rounded-full object-cover border-4 border-[#003A70]">
+                        </div>
+                        <h2 id="modalPassengerName" class="text-2xl font-black text-white">--</h2>
+                    </div>
+                </div>
+
+                <div class="bg-green-50 px-6 py-3 flex justify-between items-center border-b border-green-100">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-green-600"></i>
+                        <span class="text-[10px] font-black text-green-800 uppercase">Usuario Verificado</span>
+                    </div>
+                </div>
+
+                <div class="p-6 space-y-4">
+                    <div>
+                         <p class="text-[10px] font-black text-gray-400 uppercase">Destino</p>
+                         <h3 id="modalDest" class="font-bold text-[#003A70] text-lg">--</h3>
+                    </div>
+                    <div class="text-right">
+                         <p id="modalPrice" class="text-3xl font-black text-[#003A70]">--</p>
+                    </div>
+                </div>
+
+                <div class="p-6 pt-0 grid grid-cols-2 gap-3">
+                    <button onclick="closeModal()" class="py-4 rounded-2xl bg-red-50 text-red-600 font-black text-xs uppercase">Rechazar</button>
+                    <button id="btnAcceptRide" class="py-4 rounded-2xl bg-[#FDCA01] text-[#003A70] font-black text-xs uppercase shadow-xl flex items-center justify-center gap-2">
+                        <i data-lucide="check-circle-2" class="w-5 h-5"></i> ACEPTAR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://ppdyxsfpvbuyeytxclnr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZHl4c2ZwdmJ1eWV5dHhjbG5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3NzQ0MDIsImV4cCI6MjA4MTM1MDQwMn0.ktAgiGtEPunWTAQiIeKK9tif6Tb6g_8n0aMxaFf92WA';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // PERFIL SIMULADO DEL CONDUCTOR (EN PROD VIENE DE AUTH)
+        const DRIVER_PROFILE = {
+            id: 'driver-carlos-id', 
+            full_name: 'Carlos M.',
+            car_model: 'Nissan Versa 2024',
+            car_plate: 'ABC-123',
+            taxi_number: '042'
+        };
+
+        let currentRideRequest = null;
+        let map = null;
+
+        function initMap() {
+            map = L.map('map', { zoomControl: false }).setView([19.5406, -99.1866], 15);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+            lucide.createIcons();
+        }
+
+        function listenForRides() {
+            // Cargar existentes
+            supabase.from('rides').select('*').eq('status', 'REQUESTING').then(({ data }) => {
+                if(data && data.length > 0) renderRequestCard(data[0]);
+                else renderRequestCard({ // DEMO
+                    id: 'demo-ride', pickup_label: 'Plaza Satélite', destination_label: 'Mundo E', price: 120, passenger_id: 'demo-pass'
+                });
+            });
+
+            // Realtime
+            supabase.channel('rides-channel').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides', filter: 'status=eq.REQUESTING' }, 
+                payload => renderRequestCard(payload.new)
+            ).subscribe();
+        }
+
+        function renderRequestCard(ride) {
+            currentRideRequest = ride;
+            const panel = document.getElementById('requestsPanel');
+            panel.innerHTML = `
+                <div class="pointer-auto w-full max-w-sm bg-white rounded-[32px] p-6 shadow-2xl border border-gray-100 animate-slide-up cursor-pointer" onclick="openPassengerModal()">
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="text-[10px] font-black text-gray-400 uppercase">Nueva Solicitud</p>
+                        <h3 class="text-3xl font-black text-[#003A70]">$${ride.price}</h3>
+                    </div>
+                    <div class="space-y-1 pl-2 border-l-2 border-dashed border-gray-200">
+                        <p class="text-xs font-bold text-gray-600 truncate">${ride.pickup_label}</p>
+                        <p class="text-xs font-bold text-[#003A70] truncate">${ride.destination_label}</p>
+                    </div>
+                    <button class="w-full mt-4 bg-[#003A70] text-white font-black py-3 rounded-xl text-xs uppercase shadow-lg">Ver Perfil Seguro</button>
+                </div>
+            `;
+        }
+
+        async function openPassengerModal() {
+            if(!currentRideRequest) return;
+            document.getElementById('modalDest').innerText = currentRideRequest.destination_label;
+            document.getElementById('modalPrice').innerText = `$${currentRideRequest.price}`;
+            
+            // Simular datos pasajero
+            document.getElementById('modalPassengerName').innerText = 'Pasajero Zippy';
+            document.getElementById('modalPassengerPhoto').src = 'https://ui-avatars.com/api/?name=P&background=random';
+            
+            document.getElementById('passengerModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('passengerModal').classList.add('hidden');
+        }
+
+        // --- CORRECCIÓN CRÍTICA AQUÍ ---
+        document.getElementById('btnAcceptRide').addEventListener('click', async () => {
+            const btn = document.getElementById('btnAcceptRide');
+            btn.innerHTML = 'PROCESANDO...';
+            
+            try {
+                // INSERTAMOS CON LOS DATOS DEL VEHÍCULO
+                const { error } = await supabase.from('ride_offers').insert({
+                    ride_id: currentRideRequest.id,
+                    driver_id: DRIVER_PROFILE.id,
+                    driver_name: DRIVER_PROFILE.full_name,
+                    car_model: DRIVER_PROFILE.car_model, // ¡Importante!
+                    car_plate: DRIVER_PROFILE.car_plate, // ¡Importante!
+                    taxi_number: DRIVER_PROFILE.taxi_number,
+                    offered_price: currentRideRequest.price,
+                    eta: 3,
+                    distance: 1.2
+                });
+
+                if(error) throw error;
+
+                await supabase.from('rides').update({ status: 'ACCEPTED', driver_id: DRIVER_PROFILE.id }).eq('id', currentRideRequest.id);
+                
+                alert("✅ Viaje Aceptado. Navegando...");
+                closeModal();
+                document.getElementById('requestsPanel').innerHTML = '';
+
+            } catch (err) {
+                console.error(err);
+                alert("Error: " + err.message);
+            }
+            btn.innerHTML = 'ACEPTAR';
+        });
+
+        window.onload = () => { initMap(); listenForRides(); };
+    </script>
+</body>
+</html>
