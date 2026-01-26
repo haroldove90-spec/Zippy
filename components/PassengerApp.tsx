@@ -112,7 +112,22 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
 
   const sendSystemNotification = (title: string, body: string) => {
       if (Notification.permission === 'granted') {
-          new Notification(title, { body, icon: 'https://tritex.com.mx/zippyicono.png', badge: 'https://tritex.com.mx/zippyicono.png' });
+          try {
+              // Intenta el constructor estándar (Desktop)
+              new Notification(title, { body, icon: 'https://tritex.com.mx/zippyicono.png', badge: 'https://tritex.com.mx/zippyicono.png' });
+          } catch (e) {
+              // Fallback para Android/PWA donde el constructor es ilegal y requiere Service Worker
+              if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.ready.then(registration => {
+                      registration.showNotification(title, {
+                          body,
+                          icon: 'https://tritex.com.mx/zippyicono.png',
+                          badge: 'https://tritex.com.mx/zippyicono.png',
+                          vibrate: [200, 100, 200]
+                      } as any);
+                  }).catch(err => console.error("Error mostrando notificación SW:", err));
+              }
+          }
       }
   };
 
@@ -257,11 +272,38 @@ const PassengerApp: React.FC<PassengerAppProps> = ({ onBack }) => {
   };
 
   const handleRequestRide = async () => {
-      if (!destination) return alert("Por favor indica un destino."); if (Notification.permission === 'default') { Notification.requestPermission(); } setLoading(true);
+      if (!destination) return alert("Por favor indica un destino."); 
+      if (Notification.permission === 'default') { Notification.requestPermission(); } 
+      
+      setLoading(true);
       try {
-          const { data, error } = await supabase.from('rides').insert({ passenger_id: userProfile.id, pickup_label: pickup, destination_label: destination, pickup_address: pickup, destination_address: destination, price: calculatedPrice, status: RideStatus.REQUESTING, pickup_lat: passengerLocation[0], pickup_lng: passengerLocation[1] }).select().single(); if (error) throw error;
-          setActiveRide(data); setStatus(RideStatus.REQUESTING); setAvailableTarifas([]); showToast("Solicitando conductores...", "info");
-      } catch (err: any) { alert("Error: " + err.message); } finally { setLoading(false); }
+          const { data, error } = await supabase.from('rides').insert({ 
+            passenger_id: userProfile.id, 
+            pickup_label: pickup, 
+            destination_label: destination, 
+            pickup_address: pickup, 
+            destination_address: destination, 
+            price: calculatedPrice, 
+            status: RideStatus.REQUESTING, 
+            pickup_lat: passengerLocation[0], 
+            pickup_lng: passengerLocation[1] 
+          }).select().single(); 
+          
+          if (error) throw error;
+          
+          setActiveRide(data); 
+          setStatus(RideStatus.REQUESTING); 
+          setAvailableTarifas([]); 
+          
+          // Feedback inmediato
+          showToast("Solicitud enviada a conductores cercanos.", "info");
+          sendSystemNotification("Zippy Taxi", "Buscando conductores para tu viaje...");
+          
+      } catch (err: any) { 
+          alert("Error: " + err.message); 
+      } finally { 
+          setLoading(false); 
+      }
   };
   
   const handleScheduleRide = async (scheduledFor: string) => {

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Power, Map, Loader2, Star, BellRing, X, Navigation, CheckCircle, TrendingUp, 
@@ -7,7 +6,6 @@ import {
   User, History, Wallet, ChevronRight, Camera, Save, MapPin, Calendar, Clock,
   ArrowLeft, Mail, ShieldCheck, CreditCard, Filter, Eye, EyeOff, Smartphone, Shield, Wind, VolumeX, AlertOctagon,
   Gift, Trash2, Share2, Siren, MessageSquare, Car, ChevronDown, ChevronUp,
-  // FIX: Import XCircle icon for use in the history view.
   XCircle
 } from 'lucide-react';
 import MapVisual from './MapVisual';
@@ -142,38 +140,73 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
 
 
   useEffect(() => {
-    if (!isAuthenticated || !isOnline || view !== 'home') return;
+    if (!isAuthenticated || !isOnline || view !== 'home' || !driverProfile.id) return;
+    
+    // Initial fetch
     const fetchRides = async () => {
         const { data: ridesData } = await supabase.from('rides').select('*').eq('status', RideStatus.REQUESTING);
-        if (ridesData) { setAvailableRides(ridesData); ridesData.forEach(r => setNegotiationPrices(prev => ({...prev, [r.id]: r.price}))); }
-        if (driverProfile.id) {
-            const { data: activeData } = await supabase.from('rides').select('*').eq('driver_id', driverProfile.id).in('status', ['ACCEPTED', 'ARRIVED', 'IN_PROGRESS']).single();
-            if (activeData) { setActiveRide(activeData); setRideStatus(activeData.status as RideStatus); if (activeData.passenger_id) fetchPassengerDetails(activeData.passenger_id); }
+        if (ridesData) { 
+            setAvailableRides(ridesData); 
+            ridesData.forEach(r => setNegotiationPrices(prev => ({...prev, [r.id]: r.price}))); 
+        }
+        
+        const { data: activeData } = await supabase.from('rides').select('*').eq('driver_id', driverProfile.id).in('status', ['ACCEPTED', 'ARRIVED', 'IN_PROGRESS']).single();
+        if (activeData) { 
+            setActiveRide(activeData); 
+            setRideStatus(activeData.status as RideStatus); 
+            if (activeData.passenger_id) fetchPassengerDetails(activeData.passenger_id); 
         }
     };
     fetchRides();
 
-    const channel = supabase.channel('driver_rides_channel')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides', filter: `status=eq.${RideStatus.REQUESTING}` }, (payload) => {
+    // Enhanced Realtime Subscription (No Filter)
+    const channel = supabase.channel('driver_rides_global')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides' }, (payload) => {
         const newRide = payload.new as Ride;
-        setAvailableRides(prev => { if (prev.find(r => r.id === newRide.id)) return prev; return [newRide, ...prev]; });
-        setNegotiationPrices(prev => ({...prev, [newRide.id]: newRide.price}));
-        playSound(SOUNDS.newRequest); if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
-        showToast(`Nueva solicitud en ${newRide.pickup_label}`, 'warning');
+        // Filter in JS to ensure we catch it regardless of enum/string quirks
+        if (newRide.status === 'REQUESTING') {
+            setAvailableRides(prev => { 
+                if (prev.find(r => r.id === newRide.id)) return prev; 
+                return [newRide, ...prev]; 
+            });
+            setNegotiationPrices(prev => ({...prev, [newRide.id]: newRide.price}));
+            
+            // Notifications
+            playSound(SOUNDS.newRequest); 
+            if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+            showToast(`Nueva solicitud: ${newRide.pickup_label}`, 'warning');
+        }
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides' }, (payload) => {
         const updated = payload.new as Ride;
-        if (updated.status !== RideStatus.REQUESTING) setAvailableRides(prev => prev.filter(r => r.id !== updated.id));
+        
+        // Remove from list if no longer requesting
+        if (updated.status !== 'REQUESTING') {
+            setAvailableRides(prev => prev.filter(r => r.id !== updated.id));
+        }
+
+        // Handle Active Ride Updates
         if (updated.driver_id === driverProfile.id && updated.status === RideStatus.ACCEPTED) {
-            setPendingOffer(null); playSound(SOUNDS.assigned); if ("vibrate" in navigator) navigator.vibrate([500, 200, 500]); setActiveRide(updated); setRideStatus(RideStatus.ACCEPTED); if (updated.passenger_id) fetchPassengerDetails(updated.passenger_id);
+            setPendingOffer(null); 
+            playSound(SOUNDS.assigned); 
+            if ("vibrate" in navigator) navigator.vibrate([500, 200, 500]); 
+            setActiveRide(updated); 
+            setRideStatus(RideStatus.ACCEPTED); 
+            if (updated.passenger_id) fetchPassengerDetails(updated.passenger_id);
             showToast('¡Pasajero confirmó! Ve al punto de recogida.', 'success');
         }
-        if (pendingOffer && updated.id === pendingOffer.rideId && updated.status === RideStatus.CANCELLED) {
-             setPendingOffer(null); playSound(SOUNDS.cancel); if ("vibrate" in navigator) navigator.vibrate([1000]);
+        
+        // Handle Cancellation Logic
+        const isMyPendingOffer = pendingOffer && updated.id === pendingOffer.rideId;
+        const isMyActiveRide = activeRide && updated.id === activeRide.id;
+        
+        if ((isMyPendingOffer || isMyActiveRide) && (updated.status === 'CANCELLED' || (updated.status === 'IDLE' && rideStatus !== 'COMPLETED'))) {
+             setPendingOffer(null);
+             setActiveRide(null); 
+             setRideStatus(RideStatus.IDLE);
+             playSound(SOUNDS.cancel); 
+             if ("vibrate" in navigator) navigator.vibrate([1000]);
              showToast('El viaje fue cancelado por el pasajero.', 'error');
-        } else if (activeRide && activeRide.id === activeRide.id && (updated.status === RideStatus.CANCELLED || (updated.status === RideStatus.IDLE && rideStatus !== RideStatus.COMPLETED))) {
-             playSound(SOUNDS.cancel); if ("vibrate" in navigator) navigator.vibrate([1000]); setActiveRide(null); setRideStatus(RideStatus.IDLE);
-             showToast('El viaje ha sido cancelado por el pasajero.', 'error');
         }
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'rides' }, (payload) => {
@@ -198,7 +231,7 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
     }).subscribe();
 
     return () => { supabase.removeChannel(channel); supabase.removeChannel(msgChannel); supabase.removeChannel(notifChannel); };
-  }, [isAuthenticated, isOnline, view, driverProfile.id, activeRide, rideStatus, pendingOffer]); 
+  }, [isAuthenticated, isOnline, view, driverProfile.id, activeRide?.id, pendingOffer?.offerId]); // Optimized dependency array
 
   const fetchPassengerDetails = async (passengerId: string) => {
       const { data } = await supabase.from('profiles').select('full_name, rating, avatar_url, phone').eq('id', passengerId).single();
@@ -263,7 +296,33 @@ const DriverApp: React.FC<DriverAppProps> = ({ onBack }) => {
 
   const handleOpenRequest = (ride: Ride) => { setSelectedRequest(ride); fetchPassengerDetails(ride.passenger_id); setShowPassengerModal(true); };
   const handleShareTrip = async () => { if (!activeRide) return; const shareData = { title: 'Viaje Zippy', text: `Llevando pasajero a ${activeRide.destination_label}.`, url: 'https://zippy.mx' }; if (navigator.share) { try { await navigator.share(shareData); } catch (err) { console.error(err); } } else { showToast('Enlace copiado al portapapeles', 'info'); } };
-  const handleDeleteRide = async (rideId: string) => { if (confirm("¿Descartar?")) { setAvailableRides(prev => prev.filter(r => r.id !== rideId)); } };
+  
+  const handleDeleteRide = async (rideId: string) => {
+      if (!confirm("¿Descartar solicitud permanentemente? Esto la eliminará para todos.")) return;
+      
+      // Optimistic update
+      setAvailableRides(prev => prev.filter(r => r.id !== rideId));
+      
+      try {
+          // Attempt delete
+          const { error } = await supabase.from('rides').delete().eq('id', rideId);
+          if (error) {
+              console.warn("Delete failed, attempting cancel", error);
+              // Fallback to cancel if RLS blocks delete
+              const { error: cancelError } = await supabase.from('rides').update({ status: 'CANCELLED' }).eq('id', rideId);
+              if (cancelError) {
+                  showToast("No se pudo eliminar el viaje (permisos)", 'error');
+              } else {
+                  showToast("Solicitud cancelada", 'info');
+              }
+          } else {
+              showToast("Solicitud eliminada", 'success');
+          }
+      } catch (err) {
+          console.error(err);
+      }
+  };
+
   const adjustPrice = (rideId: string, amount: number) => setNegotiationPrices(prev => ({ ...prev, [rideId]: Math.max((prev[rideId] || 0) + amount, 0) }));
   const handleCallPassenger = () => requestPassenger?.phone ? window.location.href = `tel:${requestPassenger.phone}` : showToast("Sin número disponible", 'error');
   const handleAvatarChange = (e: any) => { if(e.target.files[0]) { setAvatarFile(e.target.files[0]); setAvatarPreview(URL.createObjectURL(e.target.files[0])); setIsEditing(true); }};

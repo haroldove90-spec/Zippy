@@ -31,12 +31,6 @@ const SERVICE_OPTIONS: { id: ProviderCategory; label: string; icon: any; color: 
     { id: 'SEGURO', label: 'Ajustador de Seguros', icon: Shield, color: 'bg-green-600', lightColor: 'bg-green-50' },
 ];
 
-const MOCK_REQUESTS: ServiceRequest[] = [
-    { id: '1', customer_name: 'Juan Pérez', description: 'Batería descargada, requiere paso de corriente.', location: 'Av. Libertad #452', price: 250, time: 'Hace 5 min', distance: '1.2 km' },
-    { id: '2', customer_name: 'María García', description: 'Neumático ponchado, requiere cambio por refacción.', location: 'Calle Morelos esq. Juárez', price: 180, time: 'Hace 12 min', distance: '2.5 km' },
-    { id: '3', customer_name: 'Roberto Gómez', description: 'Falla mecánica, el auto no arranca. Posible marcha.', location: 'Estacionamiento Multiplaza', price: 400, time: 'Hace 20 min', distance: '4.8 km' }
-];
-
 const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -44,7 +38,7 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [isOnline, setIsOnline] = useState(false);
-  const [requests, setRequests] = useState<ServiceRequest[]>(MOCK_REQUESTS);
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
 
   // Form Data
   const [email, setEmail] = useState('');
@@ -93,6 +87,8 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
               time: 'Ahora',
               distance: 'Cerca de ti'
           })));
+      } else {
+          setRequests([]);
       }
   };
 
@@ -267,7 +263,6 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
                         </>
                     )}
                     
-                    {/* FIXED INPUT TYPE AND PLACEHOLDER */}
                     <input required type="email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full bg-gray-50 p-3 rounded-xl outline-none border border-gray-100 focus:border-orange-500 font-bold text-sm" placeholder="Correo Electrónico" />
                     
                     <div className="relative">
@@ -373,36 +368,42 @@ const ProviderApp: React.FC<ProviderAppProps> = ({ onBack }) => {
 
             {isOnline ? (
                 <div className="space-y-4">
-                    {requests.map((req) => (
-                        <div key={req.id} className="bg-white rounded-[32px] p-6 shadow-xl border border-gray-50 flex flex-col gap-4 animate-slide-up">
-                            <div className="flex justify-between items-start">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-zippy-dark"><User size={20} /></div>
-                                    <div>
-                                        <h4 className="font-black text-zippy-dark">{req.customer_name}</h4>
-                                        <p className="text-[10px] font-bold text-gray-400 uppercase">{req.time} • {req.distance}</p>
+                    {requests.length === 0 ? (
+                        <div className="text-center p-8 bg-white rounded-[32px] shadow-sm border border-gray-100">
+                            <p className="text-gray-400 font-bold text-sm">No hay servicios pendientes</p>
+                        </div>
+                    ) : (
+                        requests.map((req) => (
+                            <div key={req.id} className="bg-white rounded-[32px] p-6 shadow-xl border border-gray-50 flex flex-col gap-4 animate-slide-up">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-zippy-dark"><User size={20} /></div>
+                                        <div>
+                                            <h4 className="font-black text-zippy-dark">{req.customer_name}</h4>
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase">{req.time} • {req.distance}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="block text-xl font-black text-zippy-dark">${req.price}</span>
+                                        <span className="text-[10px] font-black text-green-500 uppercase">Tarifa</span>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <span className="block text-xl font-black text-zippy-dark">${req.price}</span>
-                                    <span className="text-[10px] font-black text-green-500 uppercase">Tarifa</span>
+                                <div className="bg-gray-50 p-4 rounded-2xl">
+                                    <p className="text-xs font-bold text-gray-600 leading-relaxed italic">"{req.description}"</p>
+                                    <div className="flex items-center gap-2 mt-3 text-zippy-dark">
+                                        <MapPin size={14} className="text-red-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-tight">{req.location}</span>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 mt-2">
+                                    <button onClick={() => setRequests(prev => prev.filter(r => r.id !== req.id))} className="flex-1 py-4 rounded-2xl bg-gray-100 text-gray-400 font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors">Ignorar</button>
+                                    <button onClick={() => handleAcceptRequest(req.id)} className={`flex-[2] py-4 rounded-2xl text-white font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 ${serviceConfig.color}`}>
+                                        <CheckCircle size={16} /> Tomar Servicio
+                                    </button>
                                 </div>
                             </div>
-                            <div className="bg-gray-50 p-4 rounded-2xl">
-                                <p className="text-xs font-bold text-gray-600 leading-relaxed italic">"{req.description}"</p>
-                                <div className="flex items-center gap-2 mt-3 text-zippy-dark">
-                                    <MapPin size={14} className="text-red-500" />
-                                    <span className="text-[10px] font-black uppercase tracking-tight">{req.location}</span>
-                                </div>
-                            </div>
-                            <div className="flex gap-3 mt-2">
-                                <button onClick={() => setRequests(prev => prev.filter(r => r.id !== req.id))} className="flex-1 py-4 rounded-2xl bg-gray-100 text-gray-400 font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors">Ignorar</button>
-                                <button onClick={() => handleAcceptRequest(req.id)} className={`flex-[2] py-4 rounded-2xl text-white font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 ${serviceConfig.color}`}>
-                                    <CheckCircle size={16} /> Tomar Servicio
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
             ) : (
                 <div className="bg-gray-100 border-2 border-dashed border-gray-200 rounded-[40px] py-16 px-10 text-center animate-fade-in">
